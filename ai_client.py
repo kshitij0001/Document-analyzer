@@ -18,11 +18,24 @@ class AIClient:
         """Initialize the AI client with API key from Streamlit secrets"""
         # Get API keys from Streamlit secrets
         try:
-            self.openrouter_api_key = st.secrets.get('OPENROUTER_API_KEY')
-            self.openai_api_key = st.secrets.get('OPENAI_API_KEY')
-        except Exception:
-            self.openrouter_api_key = None
-            self.openai_api_key = None
+            # Try nested format first (user's format)
+            self.openrouter_api_key = st.secrets["openrouter"]["api_key"]
+        except:
+            try:
+                # Fallback to flat format
+                self.openrouter_api_key = st.secrets.get('OPENROUTER_API_KEY')
+            except:
+                self.openrouter_api_key = None
+        
+        try:
+            # Try nested format first
+            self.openai_api_key = st.secrets["openai"]["api_key"]
+        except:
+            try:
+                # Fallback to flat format
+                self.openai_api_key = st.secrets.get('OPENAI_API_KEY')
+            except:
+                self.openai_api_key = None
         
         # Configure based on which API key is provided
         if self.openai_api_key:

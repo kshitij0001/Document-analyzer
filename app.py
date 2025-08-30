@@ -46,11 +46,13 @@ def main():
         🔑 **API Key Required** - Please add your API key to `.streamlit/secrets.toml`:
         
         ```toml
-        OPENROUTER_API_KEY = "your-key-here"
+        [openrouter]
+        api_key = "your-key-here"
         ```
         or
         ```toml
-        OPENAI_API_KEY = "your-key-here" 
+        [openai]
+        api_key = "your-key-here"
         ```
         """)
         st.divider()
