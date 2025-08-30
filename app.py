@@ -5,9 +5,74 @@
 import streamlit as st
 import time
 import os
+import json
+import hashlib
 from document_processor import DocumentProcessor
 from vector_store import VectorStore
 from ai_client import AIClient
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+# Helper functions for caching
+def load_cached_analyses():
+    """Load cached analysis results from session state"""
+    return {}
+
+def save_cached_analyses(cache_data):
+    """Save cached analysis results to session state"""
+    if "cached_analyses" in st.session_state:
+        st.session_state.cached_analyses = cache_data
+
+def get_cache_key(documents_hash, analysis_type, personality):
+    """Generate a unique cache key for analysis results"""
+    key_string = f"{documents_hash}_{analysis_type}_{personality}"
+    return hashlib.md5(key_string.encode()).hexdigest()
+
+def get_documents_hash():
+    """Generate hash of current documents for cache key"""
+    if "documents" not in st.session_state:
+        return ""
+    doc_content = ""
+    for filename, doc_info in st.session_state.documents.items():
+        if doc_info["success"]:
+            doc_content += f"{filename}_{doc_info['word_count']}_"
+    return hashlib.md5(doc_content.encode()).hexdigest()
+
+def get_cached_analysis(analysis_type):
+    """Get cached analysis if available"""
+    try:
+        if "cached_analyses" not in st.session_state or "ai_client" not in st.session_state:
+            return None
+        documents_hash = get_documents_hash()
+        personality = st.session_state.ai_client.current_personality
+        cache_key = get_cache_key(documents_hash, analysis_type, personality)
+        
+        cached_data = st.session_state.cached_analyses.get(cache_key)
+        if cached_data:
+            return cached_data
+        return None
+    except:
+        return None
+
+def save_analysis_cache(analysis_type, content):
+    """Save analysis result to cache"""
+    try:
+        if "cached_analyses" not in st.session_state or "ai_client" not in st.session_state:
+            return
+        documents_hash = get_documents_hash()
+        personality = st.session_state.ai_client.current_personality
+        cache_key = get_cache_key(documents_hash, analysis_type, personality)
+        
+        cache_entry = {
+            "content": content,
+            "timestamp": time.time(),
+            "personality": personality,
+            "analysis_type": analysis_type
+        }
+        
+        st.session_state.cached_analyses[cache_key] = cache_entry
+    except Exception as e:
+        st.error(f"Error saving analysis cache: {e}")
 
 # Page configuration
 st.set_page_config(
@@ -30,6 +95,8 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "current_document" not in st.session_state:
     st.session_state.current_document = None
+if "cached_analyses" not in st.session_state:
+    st.session_state.cached_analyses = load_cached_analyses()
 
 def main():
     # Header
@@ -211,6 +278,9 @@ def main():
             if st.button("📈 Analyze Sentiment", use_container_width=True):
                 analyze_sentiment()
             
+            if st.button("🧠 Generate Mind Map", use_container_width=True):
+                generate_mind_map()
+            
             # Vector store statistics
             stats = st.session_state.vector_store.get_statistics()
             if stats["is_ready"]:
@@ -307,6 +377,21 @@ def generate_document_summary():
         st.warning("No documents to summarize")
         return
     
+    # Check cache first
+    cached_result = get_cached_analysis("summary")
+    if cached_result:
+        st.subheader("📝 Document Summary")
+        st.caption("✅ Cached result from previous analysis")
+        st.write(cached_result["content"])
+        
+        if st.button("🔄 Regenerate Summary"):
+            generate_fresh_summary()
+        return
+    
+    generate_fresh_summary()
+
+def generate_fresh_summary():
+    """Generate fresh summary analysis"""
     with st.spinner("Generating summary..."):
         # Combine text from all successful documents
         all_text = ""
@@ -318,6 +403,9 @@ def generate_document_summary():
             response = st.session_state.ai_client.analyze_document(all_text, "summary")
             
             if response["success"]:
+                # Save to cache
+                save_analysis_cache("summary", response["content"])
+                
                 st.subheader("📝 Document Summary")
                 st.write(response["content"])
             else:
@@ -329,6 +417,21 @@ def extract_key_points():
         st.warning("No documents to analyze")
         return
     
+    # Check cache first
+    cached_result = get_cached_analysis("key_points")
+    if cached_result:
+        st.subheader("🎯 Key Points")
+        st.caption("✅ Cached result from previous analysis")
+        st.write(cached_result["content"])
+        
+        if st.button("🔄 Regenerate Key Points"):
+            generate_fresh_key_points()
+        return
+    
+    generate_fresh_key_points()
+
+def generate_fresh_key_points():
+    """Generate fresh key points analysis"""
     with st.spinner("Extracting key points..."):
         # Get combined text
         all_text = ""
@@ -340,6 +443,9 @@ def extract_key_points():
             response = st.session_state.ai_client.analyze_document(all_text, "key_points")
             
             if response["success"]:
+                # Save to cache
+                save_analysis_cache("key_points", response["content"])
+                
                 st.subheader("🎯 Key Points")
                 st.write(response["content"])
             else:
@@ -351,6 +457,21 @@ def analyze_sentiment():
         st.warning("No documents to analyze")
         return
     
+    # Check cache first
+    cached_result = get_cached_analysis("sentiment")
+    if cached_result:
+        st.subheader("📈 Sentiment Analysis")
+        st.caption("✅ Cached result from previous analysis")
+        st.write(cached_result["content"])
+        
+        if st.button("🔄 Regenerate Sentiment Analysis"):
+            generate_fresh_sentiment()
+        return
+    
+    generate_fresh_sentiment()
+
+def generate_fresh_sentiment():
+    """Generate fresh sentiment analysis"""
     with st.spinner("Analyzing sentiment..."):
         # Get combined text
         all_text = ""
@@ -362,10 +483,167 @@ def analyze_sentiment():
             response = st.session_state.ai_client.analyze_document(all_text, "sentiment")
             
             if response["success"]:
+                # Save to cache
+                save_analysis_cache("sentiment", response["content"])
+                
                 st.subheader("📈 Sentiment Analysis")
                 st.write(response["content"])
             else:
                 st.error(f"Failed to analyze sentiment: {response['error']}")
+
+
+def create_mind_map_visualization(mind_map_data):
+    """Create interactive mind map using Plotly"""
+    try:
+        # Parse the JSON data from AI response
+        if isinstance(mind_map_data, str):
+            # Try to extract JSON from the response
+            import re
+            json_match = re.search(r'\{.*\}', mind_map_data, re.DOTALL)
+            if json_match:
+                mind_map_data = json.loads(json_match.group())
+            else:
+                # Fallback: create simple structure
+                mind_map_data = {"title": "Document Analysis", "main_themes": []}
+        
+        # Create nodes and edges for the tree
+        nodes = []
+        edges = []
+        positions = []
+        
+        # Root node
+        nodes.append(mind_map_data.get("title", "Document Analysis"))
+        positions.append((0, 0))
+        
+        node_id = 0
+        y_offset = -1
+        
+        # Add main themes
+        main_themes = mind_map_data.get("main_themes", [])
+        theme_count = len(main_themes)
+        
+        for i, theme_data in enumerate(main_themes):
+            node_id += 1
+            theme_name = theme_data.get("theme", f"Theme {i+1}")
+            nodes.append(theme_name)
+            
+            # Position themes around the root
+            x_pos = -2 + (4 * i / max(1, theme_count - 1)) if theme_count > 1 else 0
+            positions.append((x_pos, y_offset))
+            
+            # Add edge from root to theme
+            edges.append((0, node_id))
+            
+            # Add key points for this theme
+            key_points = theme_data.get("key_points", [])
+            for j, point in enumerate(key_points[:3]):  # Limit to 3 key points
+                node_id += 1
+                nodes.append(point)
+                positions.append((x_pos, y_offset - 1 - j * 0.5))
+                edges.append((len([n for n in nodes if "Theme" in str(n) or n == mind_map_data.get("title", "")])[-1] if nodes else node_id-len(key_points), node_id))
+        
+        # Create Plotly figure
+        fig = go.Figure()
+        
+        # Add edges
+        for edge in edges:
+            x0, y0 = positions[edge[0]]
+            x1, y1 = positions[edge[1]]
+            fig.add_trace(go.Scatter(
+                x=[x0, x1], y=[y0, y1],
+                mode='lines',
+                line=dict(width=2, color='lightblue'),
+                showlegend=False,
+                hoverinfo='skip'
+            ))
+        
+        # Add nodes
+        x_coords = [pos[0] for pos in positions]
+        y_coords = [pos[1] for pos in positions]
+        
+        fig.add_trace(go.Scatter(
+            x=x_coords, y=y_coords,
+            mode='markers+text',
+            marker=dict(
+                size=[30 if i == 0 else 20 if "Theme" in str(nodes[i]) else 15 for i in range(len(nodes))],
+                color=['lightcoral' if i == 0 else 'lightgreen' if "Theme" in str(nodes[i]) else 'lightblue' for i in range(len(nodes))],
+                line=dict(width=2, color='white')
+            ),
+            text=nodes,
+            textposition="middle center",
+            showlegend=False,
+            hovertemplate='%{text}<extra></extra>'
+        ))
+        
+        # Update layout
+        fig.update_layout(
+            title="Interactive Document Mind Map",
+            showlegend=False,
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=600,
+            margin=dict(l=20, r=20, t=40, b=20)
+        )
+        
+        return fig
+        
+    except Exception as e:
+        st.error(f"Error creating mind map: {e}")
+        return None
+
+def generate_mind_map():
+    """Generate mind map of all uploaded documents"""
+    if not st.session_state.documents:
+        st.warning("No documents to analyze")
+        return
+    
+    # Check cache first
+    cached_result = get_cached_analysis("mind_map")
+    if cached_result:
+        st.subheader("🧠 Document Mind Map")
+        st.caption("✅ Cached result from previous analysis")
+        
+        # Create visualization
+        fig = create_mind_map_visualization(cached_result["content"])
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.write(cached_result["content"])
+        
+        if st.button("🔄 Regenerate Mind Map"):
+            # Clear cache for this analysis type and regenerate
+            generate_fresh_mind_map()
+        return
+    
+    generate_fresh_mind_map()
+
+def generate_fresh_mind_map():
+    """Generate fresh mind map analysis"""
+    with st.spinner("Generating mind map..."):
+        # Combine text from all successful documents
+        all_text = ""
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text += f"\n\n--- {filename} ---\n{doc_info['text'][:3000]}"  # Limit text
+        
+        if all_text:
+            response = st.session_state.ai_client.analyze_document(all_text, "mind_map")
+            
+            if response["success"]:
+                # Save to cache
+                save_analysis_cache("mind_map", response["content"])
+                
+                st.subheader("🧠 Document Mind Map")
+                
+                # Create visualization
+                fig = create_mind_map_visualization(response["content"])
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.write(response["content"])
+            else:
+                st.error(f"Failed to generate mind map: {response['error']}")
 
 if __name__ == "__main__":
     main()

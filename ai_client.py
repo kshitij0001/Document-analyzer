@@ -352,7 +352,8 @@ Please answer the question based on the document content above."""
                 "summary": "Provide a comprehensive summary of this document, highlighting the main points and key takeaways.",
                 "key_points": "Extract and list the key points, findings, or conclusions from this document in a clear, organized format.",
                 "sentiment": "Analyze the tone and sentiment of this document. Consider the emotional undertones and overall attitude.",
-                "themes": "Identify the main themes, topics, and recurring concepts discussed in this document."
+                "themes": "Identify the main themes, topics, and recurring concepts discussed in this document.",
+                "mind_map": "Create a hierarchical mind map structure for this document. Identify main themes as top-level nodes, with key points and sub-topics as child nodes. Format as JSON with the following structure: {'title': 'Document Title', 'main_themes': [{'theme': 'Theme Name', 'key_points': ['Point 1', 'Point 2'], 'sub_themes': [{'theme': 'Sub-theme', 'key_points': ['Detail 1']}]}]}. Focus on creating a logical hierarchy that would work well in an interactive tree visualization."
             }
             
             prompt = analysis_prompts.get(analysis_type, analysis_prompts["summary"])
