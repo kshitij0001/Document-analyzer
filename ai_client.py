@@ -15,48 +15,47 @@ class AIClient:
     """
     
     def __init__(self):
-        """Initialize the AI client with API settings from Streamlit secrets"""
+        """Initialize the AI client with API key from Streamlit secrets"""
         # Get API keys from Streamlit secrets
         try:
             self.openrouter_api_key = st.secrets.get('OPENROUTER_API_KEY')
             self.openai_api_key = st.secrets.get('OPENAI_API_KEY')
         except Exception:
-            # Fallback if secrets are not configured
             self.openrouter_api_key = None
             self.openai_api_key = None
         
-        # Determine which service to use
+        # Configure based on which API key is provided
         if self.openai_api_key:
-            self.use_openai = True
+            # Use OpenAI directly
+            self.provider = "OpenAI"
+            self.api_key = self.openai_api_key
             self.base_url = "https://api.openai.com/v1/chat/completions"
             self.available_models = {
                 "gpt-4o-mini": "gpt-4o-mini",
+                "gpt-4o": "gpt-4o",
                 "gpt-3.5-turbo": "gpt-3.5-turbo"
             }
             self.current_model = "gpt-4o-mini"
-        else:
-            self.use_openai = False
+        elif self.openrouter_api_key:
+            # Use OpenRouter
+            self.provider = "OpenRouter"
+            self.api_key = self.openrouter_api_key
             self.base_url = "https://openrouter.ai/api/v1/chat/completions"
-            # Free models available on OpenRouter (no API key required)
-            self.free_models = {
+            self.available_models = {
+                "gpt-4o-mini": "openai/gpt-4o-mini",
+                "gpt-4o": "openai/gpt-4o",
+                "claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
                 "llama-3.2-3b": "meta-llama/llama-3.2-3b-instruct:free",
-                "llama-3.2-1b": "meta-llama/llama-3.2-1b-instruct:free",
                 "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct:free"
             }
-            # Paid models available with OpenRouter API key
-            self.paid_models = {
-                "gpt-4o": "openai/gpt-4o",
-                "gpt-4o-mini": "openai/gpt-4o-mini",
-                "claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
-                "gemini-pro": "google/gemini-pro"
-            }
-            
-            if self.openrouter_api_key:
-                self.available_models = {**self.free_models, **self.paid_models}
-                self.current_model = "openai/gpt-4o-mini"  # Default to better model if API key available
-            else:
-                self.available_models = self.free_models
-                self.current_model = self.free_models["llama-3.2-3b"]
+            self.current_model = "openai/gpt-4o-mini"
+        else:
+            # No API key provided
+            self.provider = "None"
+            self.api_key = None
+            self.base_url = None
+            self.available_models = {}
+            self.current_model = None
         
         # AI Personalities
         self.personalities = {
@@ -265,6 +264,15 @@ Please answer the question based on the document content above."""
             Dict: API response with success status and content
         """
         try:
+            # Check if API key is configured
+            if not self.api_key:
+                return {
+                    "success": False,
+                    "content": "",
+                    "error": "🔑 Please configure an API key in .streamlit/secrets.toml:\nOPENROUTER_API_KEY = \"your-key-here\"\nor\nOPENAI_API_KEY = \"your-key-here\"",
+                    "usage": {}
+                }
+            
             # Prepare request data
             data = {
                 "model": self.current_model,
@@ -274,20 +282,14 @@ Please answer the question based on the document content above."""
                 "stream": False
             }
             
-            # Prepare headers
+            # Prepare headers with API key
             headers = {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
             }
             
-            # Add authentication if API key is available
-            if self.use_openai and self.openai_api_key:
-                headers["Authorization"] = f"Bearer {self.openai_api_key}"
-            elif not self.use_openai and self.openrouter_api_key:
-                headers["Authorization"] = f"Bearer {self.openrouter_api_key}"
-                headers["HTTP-Referer"] = "https://document-analyzer.streamlit.app"
-                headers["X-Title"] = "AI Document Analyzer"
-            else:
-                # For free OpenRouter models
+            # Add OpenRouter specific headers if using OpenRouter
+            if self.provider == "OpenRouter":
                 headers["HTTP-Referer"] = "https://document-analyzer.streamlit.app"
                 headers["X-Title"] = "AI Document Analyzer"
             
@@ -327,6 +329,18 @@ Please answer the question based on the document content above."""
                         error_msg += f": {error_detail}"
                 except:
                     pass
+                
+                # Provide helpful error message for authentication issues
+                if response.status_code == 401:
+                    error_msg = """🔑 API Key Required: OpenRouter now requires an API key even for free models.
+
+To fix this:
+1. Go to https://openrouter.ai/keys
+2. Create a free account and generate an API key
+3. Add it to your .streamlit/secrets.toml file:
+   OPENROUTER_API_KEY = "your-api-key-here"
+
+Free models give you 50 requests/day (1000 with $10+ credits)."""
                 
                 return {
                     "success": False,
@@ -380,19 +394,19 @@ Please answer the question based on the document content above."""
         Returns:
             Dict: Service information including provider, model, and API status
         """
-        if self.use_openai:
+        if self.api_key:
             return {
-                "provider": "OpenAI",
+                "provider": self.provider,
                 "model": self.current_model,
-                "api_key_status": "✅ Using API Key" if self.openai_api_key else "❌ No API Key",
+                "api_key_status": "✅ Ready",
                 "available_models": list(self.available_models.keys())
             }
         else:
             return {
-                "provider": "OpenRouter",
-                "model": self.current_model,
-                "api_key_status": "✅ Using API Key (Premium Models)" if self.openrouter_api_key else "🆓 Free Models Only",
-                "available_models": list(self.available_models.keys())
+                "provider": "Not Configured",
+                "model": "None",
+                "api_key_status": "❌ API Key Required",
+                "available_models": []
             }
     
     def test_connection(self) -> Dict[str, any]:

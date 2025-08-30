@@ -39,6 +39,22 @@ def main():
     and answers from your documents with different AI expert personalities.
     """)
     
+    # Check API key status and show warning if needed
+    service_info = st.session_state.ai_client.get_service_info()
+    if "❌" in service_info.get("api_key_status", ""):
+        st.error("""
+        🔑 **API Key Required** - Please add your API key to `.streamlit/secrets.toml`:
+        
+        ```toml
+        OPENROUTER_API_KEY = "your-key-here"
+        ```
+        or
+        ```toml
+        OPENAI_API_KEY = "your-key-here" 
+        ```
+        """)
+        st.divider()
+    
     # Sidebar for document management and settings
     with st.sidebar:
         st.header("📁 Document Management")
