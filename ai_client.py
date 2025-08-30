@@ -51,22 +51,30 @@ class AIClient:
             self.api_key = self.openrouter_api_key or self.openai_api_key
             self.base_url = "https://openrouter.ai/api/v1/chat/completions"
             self.available_models = {
+                "gpt-oss-120b": "openai/gpt-oss-120b:free",
+                "deepseek-v3.1": "deepseek/deepseek-chat-v3.1:free", 
+                "gemini-2.5-flash": "google/gemini-2.5-flash-image-preview:free",
+                "gpt-oss-20b": "openai/gpt-oss-20b:free",
+                "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct:free",
                 "llama-3.2-3b": "meta-llama/llama-3.2-3b-instruct:free",
-                "llama-3.2-1b": "meta-llama/llama-3.2-1b-instruct:free",
-                "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct:free"
+                "llama-3.2-1b": "meta-llama/llama-3.2-1b-instruct:free"
             }
-            self.current_model = "meta-llama/llama-3.2-3b-instruct:free"
+            self.current_model = "openai/gpt-oss-120b:free"
         elif self.openrouter_api_key:
             # Use OpenRouter - FREE MODELS ONLY
             self.provider = "OpenRouter"
             self.api_key = self.openrouter_api_key
             self.base_url = "https://openrouter.ai/api/v1/chat/completions"
             self.available_models = {
+                "gpt-oss-120b": "openai/gpt-oss-120b:free",
+                "deepseek-v3.1": "deepseek/deepseek-chat-v3.1:free", 
+                "gemini-2.5-flash": "google/gemini-2.5-flash-image-preview:free",
+                "gpt-oss-20b": "openai/gpt-oss-20b:free",
+                "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct:free",
                 "llama-3.2-3b": "meta-llama/llama-3.2-3b-instruct:free",
-                "llama-3.2-1b": "meta-llama/llama-3.2-1b-instruct:free",
-                "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct:free"
+                "llama-3.2-1b": "meta-llama/llama-3.2-1b-instruct:free"
             }
-            self.current_model = "meta-llama/llama-3.2-3b-instruct:free"
+            self.current_model = "openai/gpt-oss-120b:free"
         else:
             # No API key provided
             self.provider = "None"
