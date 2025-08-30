@@ -45,29 +45,28 @@ class AIClient:
         
         # Configure based on which API key is provided
         if self.openai_api_key:
-            # Use OpenAI directly
-            self.provider = "OpenAI"
-            self.api_key = self.openai_api_key
-            self.base_url = "https://api.openai.com/v1/chat/completions"
+            # Redirect to OpenRouter for free models even if OpenAI key is provided
+            # This prevents accidental charges to OpenAI account
+            self.provider = "OpenRouter"
+            self.api_key = self.openrouter_api_key or self.openai_api_key
+            self.base_url = "https://openrouter.ai/api/v1/chat/completions"
             self.available_models = {
-                "gpt-4o-mini": "gpt-4o-mini",
-                "gpt-4o": "gpt-4o",
-                "gpt-3.5-turbo": "gpt-3.5-turbo"
+                "llama-3.2-3b": "meta-llama/llama-3.2-3b-instruct:free",
+                "llama-3.2-1b": "meta-llama/llama-3.2-1b-instruct:free",
+                "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct:free"
             }
-            self.current_model = "gpt-4o-mini"
+            self.current_model = "meta-llama/llama-3.2-3b-instruct:free"
         elif self.openrouter_api_key:
-            # Use OpenRouter
+            # Use OpenRouter - FREE MODELS ONLY
             self.provider = "OpenRouter"
             self.api_key = self.openrouter_api_key
             self.base_url = "https://openrouter.ai/api/v1/chat/completions"
             self.available_models = {
-                "gpt-4o-mini": "openai/gpt-4o-mini",
-                "gpt-4o": "openai/gpt-4o",
-                "claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
                 "llama-3.2-3b": "meta-llama/llama-3.2-3b-instruct:free",
+                "llama-3.2-1b": "meta-llama/llama-3.2-1b-instruct:free",
                 "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct:free"
             }
-            self.current_model = "openai/gpt-4o-mini"
+            self.current_model = "meta-llama/llama-3.2-3b-instruct:free"
         else:
             # No API key provided
             self.provider = "None"
