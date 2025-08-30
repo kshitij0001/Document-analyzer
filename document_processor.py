@@ -89,16 +89,27 @@ class DocumentProcessor:
         """Extract text from PDF file"""
         text = ""
         try:
-            # Reset file pointer
+            # Reset file pointer to beginning
             file.seek(0)
             
-            # Create PDF reader
+            # Read the file content into memory
+            file_content = file.read()
+            file.seek(0)  # Reset again for PyPDF2
+            
+            # Create PDF reader from the uploaded file
             pdf_reader = PyPDF2.PdfReader(file)
             
             # Extract text from all pages
             for page_num in range(len(pdf_reader.pages)):
-                page = pdf_reader.pages[page_num]
-                text += page.extract_text() + "\n"
+                try:
+                    page = pdf_reader.pages[page_num]
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+                except Exception as page_error:
+                    # Skip problematic pages but continue processing
+                    text += f"[Error reading page {page_num + 1}: {str(page_error)}]\n"
+                    continue
                 
         except Exception as e:
             raise Exception(f"Error reading PDF: {str(e)}")
@@ -108,22 +119,29 @@ class DocumentProcessor:
     def _extract_word_text(self, file) -> str:
         """Extract text from Word document"""
         try:
-            # Reset file pointer
+            # Reset file pointer to beginning
             file.seek(0)
             
-            # Read Word document
-            doc = docx.Document(file)
+            # Create a copy in memory to avoid file access issues
+            from io import BytesIO
+            file_copy = BytesIO(file.read())
+            
+            # Read Word document from memory
+            doc = docx.Document(file_copy)
             
             # Extract text from all paragraphs
             text = ""
             for paragraph in doc.paragraphs:
-                text += paragraph.text + "\n"
+                if paragraph.text.strip():
+                    text += paragraph.text + "\n"
                 
             # Extract text from tables
             for table in doc.tables:
                 for row in table.rows:
                     for cell in row.cells:
-                        text += cell.text + " "
+                        cell_text = cell.text.strip()
+                        if cell_text:
+                            text += cell_text + " "
                     text += "\n"
                     
         except Exception as e:
@@ -134,32 +152,29 @@ class DocumentProcessor:
     def _extract_text_file(self, file) -> str:
         """Extract text from plain text file"""
         try:
-            # Reset file pointer
+            # Reset file pointer to beginning
             file.seek(0)
             
-            # Try different encodings
-            encodings = ['utf-8', 'latin-1', 'cp1252']
-            
-            for encoding in encodings:
-                try:
-                    file.seek(0)
-                    content = file.read()
-                    if isinstance(content, bytes):
-                        text = content.decode(encoding)
-                    else:
-                        text = content
-                    return text
-                except (UnicodeDecodeError, UnicodeError):
-                    continue
-            
-            # If all encodings fail, use utf-8 with error handling
-            file.seek(0)
+            # Read content into memory once
             content = file.read()
+            
+            # Try different encodings if content is bytes
             if isinstance(content, bytes):
+                encodings = ['utf-8', 'latin-1', 'cp1252', 'ascii']
+                
+                for encoding in encodings:
+                    try:
+                        text = content.decode(encoding)
+                        return text
+                    except (UnicodeDecodeError, UnicodeError):
+                        continue
+                
+                # If all encodings fail, use utf-8 with error handling
                 text = content.decode('utf-8', errors='ignore')
+                return text
             else:
-                text = content
-            return text
+                # Content is already a string
+                return str(content)
             
         except Exception as e:
             raise Exception(f"Error reading text file: {str(e)}")
