@@ -19,30 +19,17 @@ class AIClient:
         # Get API keys from Streamlit secrets or environment
         self.openrouter_api_key = None
         
-        # Debug: Print available secrets
-        try:
-            st.write("DEBUG - Available secrets:", dict(st.secrets))
-        except:
-            st.write("DEBUG - No secrets available")
-        
         try:
             # Try nested format first (user's format)
             self.openrouter_api_key = st.secrets["openrouter"]["api_key"]
-            st.write("DEBUG - Found nested format API key")
-        except Exception as e:
-            st.write(f"DEBUG - Nested format failed: {e}")
+        except:
             try:
                 # Fallback to flat format
                 self.openrouter_api_key = st.secrets.get('OPENROUTER_API_KEY')
-                if self.openrouter_api_key:
-                    st.write("DEBUG - Found flat format API key")
-            except Exception as e2:
-                st.write(f"DEBUG - Flat format failed: {e2}")
+            except:
                 # Fallback to environment variables (Replit secrets)
                 import os
                 self.openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
-                if self.openrouter_api_key:
-                    st.write("DEBUG - Found environment API key")
         
         try:
             # Try nested format first
