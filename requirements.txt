@@ -13,3 +13,10 @@ python-docx
 requests
 scikit-learn
 streamlit
+numpy
+PyPDF2
+python-docx
+requests
+scikit-learn
+scipy
+streamlit
