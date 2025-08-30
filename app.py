@@ -43,17 +43,14 @@ def main():
     service_info = st.session_state.ai_client.get_service_info()
     if "❌" in service_info.get("api_key_status", ""):
         st.error("""
-        🔑 **API Key Required** - Please add your API key to `.streamlit/secrets.toml`:
+        🔑 **OpenRouter API Key Required** - Please add your API key to `.streamlit/secrets.toml`:
         
         ```toml
         [openrouter]
         api_key = "your-key-here"
         ```
-        or
-        ```toml
-        [openai]
-        api_key = "your-key-here"
-        ```
+        
+        Get your free API key at: https://openrouter.ai/keys
         """)
         st.divider()
     
@@ -112,10 +109,40 @@ def main():
         current_desc = personalities[selected_personality]["description"]
         st.caption(f"💡 {current_desc}")
         
-        # Show AI service info
+        # Model selection dropdown
         service_info = st.session_state.ai_client.get_service_info()
+        if service_info["available_models"]:
+            available_models = service_info["available_models"]
+            model_names = {
+                "gpt-oss-120b": "GPT-OSS 120B (Recommended)",
+                "deepseek-v3.1": "DeepSeek Chat v3.1",
+                "gemini-2.5-flash": "Gemini 2.5 Flash",
+                "gpt-oss-20b": "GPT-OSS 20B",
+                "qwen-2.5-7b": "Qwen 2.5 7B",
+                "llama-3.2-3b": "Llama 3.2 3B",
+                "llama-3.2-1b": "Llama 3.2 1B"
+            }
+            
+            selected_model = st.selectbox(
+                "Select AI Model",
+                options=available_models,
+                format_func=lambda x: model_names.get(x, x),
+                help="Choose which free AI model to use"
+            )
+            
+            # Update model if changed
+            current_model_key = None
+            for key, model_id in st.session_state.ai_client.available_models.items():
+                if model_id == st.session_state.ai_client.current_model:
+                    current_model_key = key
+                    break
+            
+            if selected_model != current_model_key:
+                if st.session_state.ai_client.set_model(selected_model):
+                    st.success(f"Switched to {model_names.get(selected_model, selected_model)}")
+        
+        # Show AI service info
         st.caption(f"**Provider:** {service_info['provider']}")
-        st.caption(f"**Model:** {service_info['model']}")
         st.caption(f"**Status:** {service_info['api_key_status']}")
         
         # Clear chat history
