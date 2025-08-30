@@ -94,6 +94,12 @@ def main():
         current_desc = personalities[selected_personality]["description"]
         st.caption(f"💡 {current_desc}")
         
+        # Show AI service info
+        service_info = st.session_state.ai_client.get_service_info()
+        st.caption(f"**Provider:** {service_info['provider']}")
+        st.caption(f"**Model:** {service_info['model']}")
+        st.caption(f"**Status:** {service_info['api_key_status']}")
+        
         # Clear chat history
         if st.button("🗑️ Clear Chat History"):
             st.session_state.chat_history = []
