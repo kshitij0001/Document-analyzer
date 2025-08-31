@@ -668,62 +668,77 @@ def display_mind_map_tree(mind_map_data):
         return
     
     for i, theme in enumerate(themes):
-        with st.expander(f"🎯 **{theme['name']}**", expanded=False):
-            st.write(f"*{theme.get('summary', 'No summary available')}*")
+        with st.expander(f"🎯 {theme['name']}", expanded=False):
+            # Theme summary with better formatting
+            if theme.get('summary'):
+                st.markdown(f"**Summary:** {theme['summary']}")
+            else:
+                st.markdown("**Summary:** No summary available")
+            
+            st.markdown("---")
             
             # FIXED: Theme-level action buttons with proper callbacks
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.button(
-                    f"💬 Discuss Theme", 
+                    "💬 Discuss", 
                     key=f"discuss_{theme['id']}_{i}",
                     help=f"Start a conversation about '{theme['name']}'",
                     on_click=discuss_theme_callback,
-                    args=(theme,)
+                    args=(theme,),
+                    use_container_width=True
                 )
             with col2:
                 st.button(
-                    f"🔍 Deep Analysis", 
+                    "🔍 Analyze", 
                     key=f"analyze_{theme['id']}_{i}",
                     help=f"Generate comprehensive analysis of '{theme['name']}'",
                     on_click=comprehensive_analysis_callback,
-                    args=(theme,)
+                    args=(theme,),
+                    use_container_width=True
                 )
             with col3:
                 st.button(
-                    f"📊 Data Points", 
+                    "📊 Data", 
                     key=f"data_{theme['id']}_{i}",
                     help=f"Extract specific data and facts about '{theme['name']}'",
                     on_click=extract_data_points_callback,
-                    args=(theme,)
+                    args=(theme,),
+                    use_container_width=True
                 )
             
-            # Display sub-themes
+            # Display sub-themes with improved formatting
             sub_themes = theme.get("sub_themes", [])
             if sub_themes:
-                st.markdown("**Sub-topics:**")
+                st.markdown("### 🌳 Sub-topics:")
                 for j, sub_theme in enumerate(sub_themes):
                     with st.container():
-                        st.markdown(f"**{sub_theme['name']}**")
-                        st.write(f"_{sub_theme.get('summary', 'No summary available')}_")
+                        # Create a nice card-like appearance for sub-themes
+                        st.markdown(f"**• {sub_theme['name']}**")
+                        if sub_theme.get('summary'):
+                            st.markdown(f"  *{sub_theme['summary']}*")
+                        else:
+                            st.markdown("  *No summary available*")
                         
                         # FIXED: Sub-theme action buttons with unique keys and callbacks
                         col1, col2 = st.columns(2)
                         with col1:
                             st.button(
-                                f"💬 Explore", 
+                                "💬 Explore", 
                                 key=f"explore_{theme['id']}_{j}_{i}",
                                 help=f"Deep dive into '{sub_theme['name']}'",
                                 on_click=explore_topic_callback,
-                                args=(sub_theme,)
+                                args=(sub_theme,),
+                                use_container_width=True
                             )
                         with col2:
                             st.button(
-                                f"📋 Details", 
+                                "📋 Details", 
                                 key=f"detail_{theme['id']}_{j}_{i}",
                                 help=f"Generate detailed notes for '{sub_theme['name']}'",
                                 on_click=generate_details_callback,
-                                args=(sub_theme,)
+                                args=(sub_theme,),
+                                use_container_width=True
                             )
 
 def explore_topic_in_chat(topic_data):
@@ -1246,39 +1261,27 @@ with st.sidebar:
 
 # Main content area
 if st.session_state.documents:
-    # Create tabs for different functionalities
-    tab1, tab2 = st.tabs(["🔍 Document Analysis", "💬 AI Chat"])
+    # Create two-column layout: Chat on left, Analysis on right
+    chat_col, analysis_col = st.columns([1, 1])
     
-    with tab1:
-        st.header("🔍 Quick Analysis")
-        
-        if st.button("📝 Generate Summary", use_container_width=True):
-            generate_document_summary()
-        
-        if st.button("🎯 Extract Key Points", use_container_width=True):
-            extract_key_points()
-        
-        if st.button("📈 Analyze Sentiment", use_container_width=True):
-            analyze_sentiment()
-        
-        if st.button("🧠 Generate Mind Map", use_container_width=True):
-            generate_mind_map()
-    
-    with tab2:
+    with chat_col:
         st.header("💬 AI-Powered Document Chat")
         
         # Display chat history
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         
-        # Chat interface
-        for i, message in enumerate(st.session_state.chat_messages):
-            if message["role"] == "user":
-                with st.chat_message("user"):
-                    st.write(message["message"])
-            else:
-                with st.chat_message("assistant"):
-                    st.write(message["message"])
+        # Chat container with fixed height for scrolling
+        chat_container = st.container()
+        with chat_container:
+            # Chat interface
+            for i, message in enumerate(st.session_state.chat_messages):
+                if message["role"] == "user":
+                    with st.chat_message("user"):
+                        st.write(message["message"])
+                else:
+                    with st.chat_message("assistant"):
+                        st.write(message["message"])
         
         # Chat input
         user_question = st.chat_input("Ask a question about your documents...")
@@ -1328,6 +1331,23 @@ if st.session_state.documents:
                         error_message = f"Sorry, I encountered an error: {response['error']}"
                         st.error(error_message)
                         st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
+    
+    with analysis_col:
+        st.header("🔍 Document Analysis")
+        
+        # Analysis buttons in a more compact layout
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📝 Generate Summary", use_container_width=True):
+                generate_document_summary()
+            if st.button("📈 Analyze Sentiment", use_container_width=True):
+                analyze_sentiment()
+        
+        with col2:
+            if st.button("🎯 Extract Key Points", use_container_width=True):
+                extract_key_points()
+            if st.button("🧠 Generate Mind Map", use_container_width=True):
+                generate_mind_map()
 
 else:
     st.info("👆 Upload some documents to get started!")
