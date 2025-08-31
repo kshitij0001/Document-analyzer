@@ -142,6 +142,8 @@ if "cached_analyses" not in st.session_state:
     st.session_state.cached_analyses = load_cached_analyses()
 if "mindmap_data" not in st.session_state:
     st.session_state.mindmap_data = None
+if "prepared_question" not in st.session_state:
+    st.session_state.prepared_question = None
 
 def display_mind_map_results(mind_map_data):
     """Display mind map results in multiple formats"""
@@ -348,47 +350,20 @@ def explore_topic_in_chat(topic_data):
         topic_name = topic_data['name']
         topic_summary = topic_data.get('summary', '')
         
-        # Create a focused question
+        # Create a focused question and store it for the user to send
         question = f"Tell me more about '{topic_name}'. {topic_summary} What are the key insights and details about this topic from the documents?"
         
-        # Add to chat history
-        st.session_state.chat_history.append({
-            "role": "user",
-            "content": f"[Mind Map Topic] {topic_name}"
-        })
+        # Store the prepared question in session state so it appears in the chat input
+        if 'prepared_question' not in st.session_state:
+            st.session_state.prepared_question = question
+        else:
+            st.session_state.prepared_question = question
+            
+        st.success(f"✅ Prepared question about '{topic_name}' - **scroll down to the chat input to review and send it!**")
+        st.info(f"💡 **Ready to ask:** {question[:100]}{'...' if len(question) > 100 else ''}")
         
-        with st.spinner(f"Exploring '{topic_name}'..."):
-            # Get relevant context from documents
-            context = st.session_state.vector_store.get_context_for_query(question)
-            
-            # Get AI response
-            response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=2000,
-                temperature=0.7
-            )
-            
-            if response["success"]:
-                # Add AI response to chat
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                # Save chat history persistently
-                save_chat_history()
-                st.success(f"✅ Added detailed discussion about '{topic_name}' to the chat! **Scroll up to see the conversation.**")
-                # Force page refresh to show new content
-                st.rerun()
-            else:
-                st.error(f"Failed to explore topic: {response['error']}")
     except Exception as e:
-        st.error(f"Error in explore_topic_in_chat: {str(e)}")
+        st.error(f"Error preparing topic question: {str(e)}")
 
 def generate_detailed_notes(topic_data):
     """Generate detailed notes for a specific topic"""
@@ -398,38 +373,13 @@ def generate_detailed_notes(topic_data):
         
         question = f"Generate comprehensive, detailed notes about '{topic_name}'. Include specific facts, data, methodologies, and actionable insights. Break down the information into organized sections with bullet points and structured details."
         
-        with st.spinner(f"Generating detailed notes for '{topic_name}'..."):
-            context = st.session_state.vector_store.get_context_for_query(question)
-            response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=2500,
-                temperature=0.5
-            )
-            
-            if response["success"]:
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": f"[Detailed Notes] {topic_name}"
-                })
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                save_chat_history()
-                st.success(f"✅ Generated detailed notes for '{topic_name}' - **scroll up to see the new content in the chat!**")
-                # Force page refresh to show new content
-                st.rerun()
-            else:
-                st.error(f"Failed to generate notes: {response['error']}")
+        # Store the prepared question for user to send
+        st.session_state.prepared_question = question
+        st.success(f"✅ Prepared detailed notes request for '{topic_name}' - **scroll down to the chat input to review and send it!**")
+        st.info(f"💡 **Ready to ask:** Generate detailed notes about '{topic_name}'...")
+        
     except Exception as e:
-        st.error(f"Error in generate_detailed_notes: {str(e)}")
+        st.error(f"Error preparing detailed notes request: {str(e)}")
 
 def generate_comprehensive_analysis(theme_data):
     """Generate comprehensive analysis for a theme"""
@@ -439,38 +389,13 @@ def generate_comprehensive_analysis(theme_data):
         
         question = f"Provide a comprehensive analysis of '{theme_name}'. Include: 1) Overview and context, 2) Key findings and insights, 3) Supporting evidence and data, 4) Implications and significance, 5) Related concepts and connections. Be thorough and analytical."
         
-        with st.spinner(f"Generating comprehensive analysis for '{theme_name}'..."):
-            context = st.session_state.vector_store.get_context_for_query(question)
-            response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=3000,
-                temperature=0.4
-            )
-            
-            if response["success"]:
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": f"[Comprehensive Analysis] {theme_name}"
-                })
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                save_chat_history()
-                st.success(f"✅ Generated comprehensive analysis for '{theme_name}' - **scroll up to see the new content in the chat!**")
-                # Force page refresh to show new content
-                st.rerun()
-            else:
-                st.error(f"Failed to generate analysis: {response['error']}")
+        # Store the prepared question for user to send
+        st.session_state.prepared_question = question
+        st.success(f"✅ Prepared comprehensive analysis request for '{theme_name}' - **scroll down to the chat input to review and send it!**")
+        st.info(f"💡 **Ready to ask:** Comprehensive analysis of '{theme_name}'...")
+        
     except Exception as e:
-        st.error(f"Error in generate_comprehensive_analysis: {str(e)}")
+        st.error(f"Error preparing comprehensive analysis request: {str(e)}")
 
 def extract_data_points(theme_data):
     """Extract specific data points and facts for a theme"""
@@ -480,38 +405,13 @@ def extract_data_points(theme_data):
         
         question = f"Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'. Present as organized lists with clear categories. Include quantitative data, qualitative findings, and cited sources where available."
         
-        with st.spinner(f"Extracting data points for '{theme_name}'..."):
-            context = st.session_state.vector_store.get_context_for_query(question)
-            response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=2000,
-                temperature=0.2  # Lower temperature for factual extraction
-            )
-            
-            if response["success"]:
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": f"[Data Points] {theme_name}"
-                })
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                save_chat_history()
-                st.success(f"✅ Extracted data points for '{theme_name}' - **scroll up to see the new content in the chat!**")
-                # Force page refresh to show new content
-                st.rerun()
-            else:
-                st.error(f"Failed to extract data points: {response['error']}")
+        # Store the prepared question for user to send
+        st.session_state.prepared_question = question
+        st.success(f"✅ Prepared data extraction request for '{theme_name}' - **scroll down to the chat input to review and send it!**")
+        st.info(f"💡 **Ready to ask:** Extract data points about '{theme_name}'...")
+        
     except Exception as e:
-        st.error(f"Error in extract_data_points: {str(e)}")
+        st.error(f"Error preparing data extraction request: {str(e)}")
 
 def add_debug_info(message):
     """Add debug information to global debug log"""
@@ -721,7 +621,14 @@ def main():
         
         # Chat input
         if st.session_state.documents:
-            user_question = st.chat_input("Ask a question about your documents...")
+            # Check if there's a prepared question from interactive buttons
+            default_value = ""
+            if hasattr(st.session_state, 'prepared_question') and st.session_state.prepared_question:
+                default_value = st.session_state.prepared_question
+                # Clear the prepared question so it doesn't persist
+                st.session_state.prepared_question = None
+            
+            user_question = st.chat_input("Ask a question about your documents...", value=default_value)
             
             if user_question:
                 handle_user_question(user_question)
@@ -871,7 +778,9 @@ def generate_document_summary():
                 cache_key = get_cache_key(documents_hash, "summary", personality)
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
+                # Force regeneration by calling fresh summary and rerunning
                 generate_fresh_summary()
+                st.rerun()
                 return
         
         st.write(cached_result["content"])
@@ -924,6 +833,7 @@ def extract_key_points():
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
                 generate_fresh_key_points()
+                st.rerun()
                 return
         
         st.write(cached_result["content"])
@@ -976,6 +886,7 @@ def analyze_sentiment():
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
                 generate_fresh_sentiment()
+                st.rerun()
                 return
         
         st.write(cached_result["content"])
@@ -1649,6 +1560,7 @@ def generate_mind_map():
                     del st.session_state.cached_analyses[cache_key]
                 # Generate fresh mind map immediately
                 generate_fresh_mind_map()
+                st.rerun()
                 return
         
         # Display the cached mind map
