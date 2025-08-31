@@ -1086,6 +1086,21 @@ def parse_mind_map_data(mind_map_data):
             st.write("**Emergency Fallback:** Creating basic structure")
         return create_themes_from_text_with_debug(str(mind_map_data))
 
+def get_pastel_colors():
+    """Return a list of pastel colors for mind map visualization"""
+    return [
+        '#FFB3BA',  # Light pink
+        '#BAFFC9',  # Light green
+        '#BAE1FF',  # Light blue
+        '#FFFFBA',  # Light yellow
+        '#FFD1BA',  # Light orange
+        '#E0BBE4',  # Light purple
+        '#B5EAD7',  # Light teal
+        '#FFC9DE',  # Light rose
+        '#C7CEEA',  # Light lavender
+        '#B9FBC0'   # Light mint
+    ]
+
 def count_total_nodes(themes, max_level=None, current_level=0):
     """Count total nodes up to a certain level"""
     if max_level and current_level >= max_level:
