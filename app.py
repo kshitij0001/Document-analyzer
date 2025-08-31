@@ -578,22 +578,109 @@ def get_pastel_colors():
         '#FFECB3'   # Light amber
     ]
 
+def create_themes_from_text(text_response):
+    """Extract themes from text response when JSON parsing fails"""
+    try:
+        # Simple extraction based on common patterns
+        lines = text_response.strip().split('\n')
+        themes = []
+        current_theme = None
+        theme_id = 0
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Look for theme indicators (bold text, numbered items, bullet points)
+            if any(indicator in line.lower() for indicator in ['theme', 'topic', 'section', 'main', 'key']):
+                if current_theme:
+                    themes.append(current_theme)
+                
+                theme_id += 1
+                current_theme = {
+                    'id': f'theme_{theme_id}',
+                    'name': line.replace('*', '').replace('#', '').strip()[:50],
+                    'summary': f'Key theme extracted from document analysis',
+                    'sub_themes': []
+                }
+            elif line.startswith(('-', '*', '•', '◦')) or line[0].isdigit():
+                # This looks like a sub-point
+                if current_theme:
+                    sub_theme = {
+                        'id': f'sub_theme_{theme_id}_{len(current_theme["sub_themes"])}',
+                        'name': line.lstrip('- *•◦0123456789. ').strip()[:50],
+                        'summary': 'Sub-theme from document analysis',
+                        'sub_themes': []
+                    }
+                    current_theme['sub_themes'].append(sub_theme)
+        
+        # Add the last theme
+        if current_theme:
+            themes.append(current_theme)
+        
+        # If no structured themes found, create some basic ones
+        if not themes:
+            # Extract first few sentences as themes
+            sentences = text_response.split('.')[:5]
+            for i, sentence in enumerate(sentences):
+                if sentence.strip():
+                    themes.append({
+                        'id': f'auto_theme_{i}',
+                        'name': sentence.strip()[:50] + "...",
+                        'summary': 'Automatically extracted theme',
+                        'sub_themes': []
+                    })
+        
+        return {
+            'title': 'Document Analysis (Text Fallback)',
+            'themes': themes
+        }
+    except:
+        return {
+            'title': 'Document Analysis',
+            'themes': [{
+                'id': 'fallback_theme',
+                'name': 'Document Content',
+                'summary': 'Content analysis available - click to explore in chat',
+                'sub_themes': []
+            }]
+        }
+
 def parse_mind_map_data(mind_map_data):
     """Parse AI response into structured mind map data"""
     try:
+        # Debug: Show what we're trying to parse
+        st.write("🔍 **Debug**: Raw AI response for mind map:")
+        st.text_area("AI Response", str(mind_map_data)[:1000] + "..." if len(str(mind_map_data)) > 1000 else str(mind_map_data))
+        
         if isinstance(mind_map_data, str):
             import re
+            # Try to find JSON in the response
             json_match = re.search(r'\{.*\}', mind_map_data, re.DOTALL)
             if json_match:
-                parsed_data = json.loads(json_match.group())
-                # Convert old format to new format if needed
-                if 'main_themes' in parsed_data:
-                    parsed_data['themes'] = parsed_data.pop('main_themes')
-                return parsed_data
+                try:
+                    parsed_data = json.loads(json_match.group())
+                    # Convert old format to new format if needed
+                    if 'main_themes' in parsed_data:
+                        parsed_data['themes'] = parsed_data.pop('main_themes')
+                    
+                    # Debug: Show parsed structure
+                    st.write("✅ **Debug**: Successfully parsed JSON")
+                    st.write(f"Title: {parsed_data.get('title', 'N/A')}")
+                    st.write(f"Number of themes found: {len(parsed_data.get('themes', []))}")
+                    
+                    return parsed_data
+                except json.JSONDecodeError as e:
+                    st.error(f"🚨 **Debug**: JSON parsing failed: {str(e)}")
+                    return {"title": "Document Analysis", "themes": []}
             else:
-                return {"title": "Document Analysis", "themes": []}
+                st.warning("🚨 **Debug**: No JSON structure found in AI response")
+                # Try to create themes from text structure
+                return create_themes_from_text(mind_map_data)
         return mind_map_data
-    except:
+    except Exception as e:
+        st.error(f"🚨 **Debug**: Parsing error: {str(e)}")
         return {"title": "Document Analysis", "themes": []}
 
 def count_total_nodes(themes, max_level=None, current_level=0):
