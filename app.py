@@ -10,6 +10,7 @@ import hashlib
 from document_processor import DocumentProcessor
 from vector_store import VectorStore
 from ai_client import AIClient
+from mindmap_generator import MindMapGenerator
 # Optional plotly imports for mind map visualization
 try:
     import plotly.graph_objects as go
@@ -100,6 +101,8 @@ if "vector_store" not in st.session_state:
     st.session_state.vector_store = VectorStore()
 if "ai_client" not in st.session_state:
     st.session_state.ai_client = AIClient()
+if "mindmap_generator" not in st.session_state:
+    st.session_state.mindmap_generator = MindMapGenerator(st.session_state.ai_client)
 if "documents" not in st.session_state:
     st.session_state.documents = {}
 if "chat_history" not in st.session_state:
@@ -108,19 +111,137 @@ if "current_document" not in st.session_state:
     st.session_state.current_document = None
 if "cached_analyses" not in st.session_state:
     st.session_state.cached_analyses = load_cached_analyses()
-if "mindmap_expanded_nodes" not in st.session_state:
-    st.session_state.mindmap_expanded_nodes = set()
-if "mindmap_visible_levels" not in st.session_state:
-    st.session_state.mindmap_visible_levels = 2
-if "mindmap_debug_info" not in st.session_state:
-    st.session_state.mindmap_debug_info = []
-if "global_debug_info" not in st.session_state:
-    st.session_state.global_debug_info = []
+if "mindmap_data" not in st.session_state:
+    st.session_state.mindmap_data = None
+
+def display_mind_map_results(mind_map_data):
+    """Display mind map results in multiple formats"""
+    if isinstance(mind_map_data, str):
+        st.error("Mind map data is in text format, not structured data")
+        st.text_area("Raw Response", mind_map_data, height=200)
+        return
+    
+    if "error" in mind_map_data:
+        st.error(f"Error in mind map data: {mind_map_data['error']}")
+        return
+    
+    # Store in session state for potential reuse
+    st.session_state.mindmap_data = mind_map_data
+    
+    # Create tabs for different views
+    tab1, tab2, tab3 = st.tabs(["🌳 Tree View", "📋 Markdown", "🔗 Mermaid Diagram"])
+    
+    with tab1:
+        st.write("**Interactive Mind Map Structure**")
+        display_mind_map_tree(mind_map_data)
+    
+    with tab2:
+        st.write("**Markdown Export**")
+        markdown_content = st.session_state.mindmap_generator.export_to_markdown(mind_map_data)
+        st.markdown(markdown_content)
+        st.download_button(
+            "📄 Download Markdown",
+            markdown_content,
+            "mindmap.md",
+            "text/markdown"
+        )
+    
+    with tab3:
+        st.write("**Mermaid Diagram Code**")
+        mermaid_content = st.session_state.mindmap_generator.export_to_mermaid(mind_map_data)
+        st.code(mermaid_content, language="mermaid")
+        st.download_button(
+            "📊 Download Mermaid",
+            mermaid_content,
+            "mindmap.mmd",
+            "text/plain"
+        )
+        st.info("💡 Copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for an interactive diagram!")
+
+def display_mind_map_tree(mind_map_data):
+    """Display mind map as an interactive tree structure"""
+    title = mind_map_data.get("title", "Mind Map")
+    themes = mind_map_data.get("themes", [])
+    
+    st.markdown(f"### {title}")
+    
+    if not themes:
+        st.warning("No themes found in the mind map")
+        return
+    
+    for i, theme in enumerate(themes):
+        with st.expander(f"🎯 {theme['name']}", expanded=i < 3):  # Auto-expand first 3
+            st.write(theme.get('summary', 'No summary available'))
+            
+            sub_themes = theme.get('sub_themes', [])
+            if sub_themes:
+                st.write("**Sub-topics:**")
+                for j, sub_theme in enumerate(sub_themes):
+                    with st.expander(f"📌 {sub_theme['name']}", expanded=False):
+                        st.write(sub_theme.get('summary', 'No summary available'))
+                        
+                        # Show details if they exist
+                        details = sub_theme.get('sub_themes', [])
+                        if details:
+                            st.write("**Details:**")
+                            for detail in details:
+                                st.markdown(f"• **{detail['name']}**: {detail.get('summary', 'No details available')}")
+                        
+                        # Add a button to explore this topic in chat
+                        if st.button(f"💬 Explore '{sub_theme['name']}' in Chat", key=f"explore_{theme['id']}_{j}"):
+                            explore_topic_in_chat(sub_theme)
+            else:
+                st.info("No sub-topics found for this theme")
+            
+            # Add button to explore main theme in chat
+            if st.button(f"💬 Discuss '{theme['name']}'", key=f"discuss_{theme['id']}"):
+                explore_topic_in_chat(theme)
+
+def explore_topic_in_chat(topic_data):
+    """Add a topic exploration question to the chat"""
+    topic_name = topic_data['name']
+    topic_summary = topic_data.get('summary', '')
+    
+    # Create a focused question
+    question = f"Tell me more about '{topic_name}'. {topic_summary} What are the key insights and details about this topic from the documents?"
+    
+    # Add to chat history
+    st.session_state.chat_history.append({
+        "role": "user",
+        "content": f"[Mind Map Topic] {topic_name}"
+    })
+    
+    with st.spinner(f"Exploring '{topic_name}'..."):
+        # Get relevant context from documents
+        context = st.session_state.vector_store.get_context_for_query(question)
+        
+        # Get AI response
+        response = st.session_state.ai_client.chat_with_document(
+            user_question=question,
+            document_context=context,
+            max_tokens=2000,
+            temperature=0.7
+        )
+        
+        if response["success"]:
+            # Add AI response to chat
+            personality_name = st.session_state.ai_client.personalities[
+                st.session_state.ai_client.current_personality
+            ]["name"]
+            
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": response["content"],
+                "personality": personality_name
+            })
+            st.success(f"Added detailed discussion about '{topic_name}' to the chat!")
+            st.rerun()
+        else:
+            st.error(f"Failed to explore topic: {response['error']}")
 
 def add_debug_info(message):
     """Add debug information to global debug log"""
-    if 'global_debug_info' in st.session_state:
-        st.session_state.global_debug_info.append(message)
+    pass  # Simplified - debug info not needed with new implementation
 
 def main():
     # Hide heading links with enhanced CSS
@@ -303,8 +424,6 @@ def main():
     # Main content area
     col1, col2 = st.columns([2, 1])
     
-    # Show global debug panel
-    show_global_debug_panel()
     
     with col1:
         # Chat interface
@@ -598,79 +717,7 @@ def generate_fresh_sentiment():
                 st.error(f"Failed to analyze sentiment: {response['error']}")
 
 
-def get_pastel_colors():
-    """Generate beautiful pastel color palette"""
-    return [
-        '#FFB3BA',  # Light pink
-        '#BAFFC9',  # Light green
-        '#BAE1FF',  # Light blue
-        '#FFFFBA',  # Light yellow
-        '#FFDFBA',  # Light peach
-        '#E0BBE4',  # Light purple
-        '#FFC9A9',  # Light coral
-        '#C9F0FF',  # Light cyan
-        '#D4EDDA',  # Light mint
-        '#F8D7DA',  # Light rose
-        '#CCE5FF',  # Light sky blue
-        '#FFECB3'   # Light amber
-    ]
 
-def show_global_debug_panel():
-    """Display global debug panel in sidebar"""
-    
-    # Create debug info container in sidebar
-    with st.sidebar:
-        st.markdown("---")
-        st.subheader("🐛 Debug Panel")
-        
-        # Show debug toggle
-        debug_expanded = st.checkbox("Show Debug Information", key="debug_toggle")
-        
-        if debug_expanded:
-            # Combine all debug info
-            all_debug = []
-            if 'mindmap_debug_info' in st.session_state:
-                all_debug.extend(st.session_state.mindmap_debug_info)
-            if 'global_debug_info' in st.session_state:
-                all_debug.extend(st.session_state.global_debug_info)
-            
-            if all_debug:
-                st.caption(f"Debug Log ({len(all_debug)} entries)")
-                
-                # Show recent debug items in a scrollable container
-                with st.container():
-                    st.markdown("**Recent Debug Information:**")
-                    for item in all_debug[-20:]:  # Show last 20 debug items
-                        if item.startswith("**"):
-                            st.markdown(f"**{item}**")
-                        elif "❌" in item or "ERROR" in item.upper():
-                            st.error(item)
-                        elif "✅" in item or "SUCCESS" in item.upper():
-                            st.success(item)
-                        elif "⚠️" in item or "WARNING" in item.upper():
-                            st.warning(item)
-                        else:
-                            st.text(f"• {item}")
-                
-                # Action buttons
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Clear Debug", key="clear_debug"):
-                        st.session_state.mindmap_debug_info = []
-                        st.session_state.global_debug_info = []
-                        st.rerun()
-                with col2:
-                    debug_text = "\n".join(all_debug)
-                    st.download_button(
-                        "📄 Export",
-                        debug_text,
-                        "debug_log.txt",
-                        "text/plain",
-                        key="export_debug"
-                    )
-            else:
-                st.info("No debug information available yet.")
-                st.caption("Debug info will appear here after you use analysis features.")
 
 def create_themes_from_text_with_debug(text_response):
     """Extract themes from text response when JSON parsing fails - with debugging"""
@@ -1269,7 +1316,7 @@ def generate_focused_notes(node_data):
             st.error(f"Failed to generate notes: {response['error']}")
 
 def generate_mind_map():
-    """Generate mind map of all uploaded documents"""
+    """Generate mind map of all uploaded documents using the new MindMapGenerator"""
     if not st.session_state.documents:
         st.warning("No documents to analyze")
         return
@@ -1277,7 +1324,7 @@ def generate_mind_map():
     # Check cache first
     cached_result = get_cached_analysis("mind_map")
     if cached_result:
-        st.subheader("🧠 Interactive Document Mind Map")
+        st.subheader("🧠 Document Mind Map")
         col1, col2 = st.columns([3, 1])
         with col1:
             st.caption("✅ Cached result from previous analysis")
@@ -1289,185 +1336,42 @@ def generate_mind_map():
                 cache_key = get_cache_key(documents_hash, "mind_map", personality)
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
-                st.rerun()  # Refresh to trigger regeneration
+                st.rerun()
         
-        # Create visualization
-        fig = create_mind_map_visualization(cached_result["content"])
-        if fig:
-            # Display the mind map with proper Streamlit configuration
-            if PLOTLY_AVAILABLE:
-                # Configure plotly chart with Streamlit best practices
-                config = {
-                    'displayModeBar': True,
-                    'displaylogo': False,
-                    'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d', 'resetScale2d'],
-                    'scrollZoom': False,  # Prevent conflicts with page scrolling
-                    'doubleClick': 'reset',
-                    'showTips': True
-                }
-                
-                clicked_data = st.plotly_chart(
-                    fig, 
-                    use_container_width=True, 
-                    key="mindmap_chart",
-                    config=config,
-                    theme="streamlit"  # Use Streamlit theme
-                )
-            else:
-                st.markdown(fig)  # Display text-based mind map
-            
-            # Instructions
-            st.info("💡 **How to use:** Click on nodes to expand themes or click leaf nodes (end topics) to generate detailed notes in the chat!")
-            
-            # Handle clicks (simplified approach using session state)
-            if 'current_mindmap_data' in st.session_state:
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    if st.button("🔍 Expand All Level 1", key="expand_l1"):
-                        # Expand first level themes
-                        themes = st.session_state.current_mindmap_data.get('themes', [])
-                        for theme in themes:
-                            node_id = theme.get('id', f"theme_{themes.index(theme)}")
-                            st.session_state.mindmap_expanded_nodes.add(node_id)
-                        st.rerun()
-                
-                with col2:
-                    if st.button("🔍 Expand All Level 2", key="expand_l2"):
-                        # Expand first two levels
-                        themes = st.session_state.current_mindmap_data.get('themes', [])
-                        def expand_levels(theme_list, max_level, current_level=0):
-                            if current_level >= max_level:
-                                return
-                            for theme in theme_list:
-                                node_id = theme.get('id', f"theme_{theme_list.index(theme)}")
-                                st.session_state.mindmap_expanded_nodes.add(node_id)
-                                if 'sub_themes' in theme and theme['sub_themes']:
-                                    expand_levels(theme['sub_themes'], max_level, current_level + 1)
-                        expand_levels(themes, 2)
-                        st.rerun()
-                
-                with col3:
-                    if st.button("🔄 Collapse All", key="collapse_all"):
-                        st.session_state.mindmap_expanded_nodes.clear()
-                        st.rerun()
-        else:
-            st.write(cached_result["content"])
-        
+        # Display the cached mind map
+        display_mind_map_results(cached_result["content"])
         return
     
+    # Generate fresh mind map
     generate_fresh_mind_map()
 
 def generate_fresh_mind_map():
-    """Generate fresh mind map analysis with optional debugging"""
-    # Clear previous state
-    st.session_state.mindmap_expanded_nodes.clear()
-    
+    """Generate fresh mind map using the new MindMapGenerator"""
     # Combine text from all successful documents
     all_text = ""
     doc_titles = []
-    total_chars = 0
     
     for filename, doc_info in st.session_state.documents.items():
         if doc_info["success"]:
-            doc_text = doc_info['text'][:4000]  # Limit to 4000 chars per doc
+            doc_text = doc_info['text'][:5000]  # Limit to 5000 chars per doc
             all_text += f"\n\n=== {filename} ===\n{doc_text}"
             doc_titles.append(filename)
-            total_chars += len(doc_text)
-    
-    # Debug information in collapsible section
-    with st.expander("🔍 **Debug Info** - Mind Map Generation Process", expanded=False):
-        st.write("**Step 1:** Preparing document content")
-        st.write(f"- Documents to analyze: {len(doc_titles)}")
-        st.write(f"- Document names: {', '.join(doc_titles)}")
-        st.write(f"- Total text length: {total_chars:,} characters")
-        st.write(f"- Text preview: {all_text[:200]}...")
-        
-        if all_text:
-            st.write("**Step 2:** AI Service Configuration")
-            # Show AI service info
-            service_info = st.session_state.ai_client.get_service_info()
-            st.write(f"- AI Provider: {service_info.get('provider', 'Unknown')}")
-            st.write(f"- Model: {service_info.get('model', 'Unknown')}")
-            st.write(f"- API Status: {service_info.get('api_key_status', 'Unknown')}")
     
     if all_text:
-        with st.spinner("🤖 AI is analyzing your documents..."):
-            response = st.session_state.ai_client.analyze_document(all_text, "mind_map")
+        # Generate mind map using the new generator
+        mind_map_data = st.session_state.mindmap_generator.generate_mind_map(all_text, doc_titles)
         
-        # More debug info in the same expander
-        with st.expander("🔍 **Debug Info** - Mind Map Generation Process", expanded=False):
-            st.write("**Step 3:** AI Response Analysis")
-            st.write(f"- Success: {'✅' if response['success'] else '❌'}")
-            st.write(f"- Response length: {len(str(response.get('content', ''))) if response.get('content') else 0} characters")
-            
-            if response.get('usage'):
-                st.write(f"- Tokens used: {response['usage']}")
-        
-        if response["success"]:
+        if "error" not in mind_map_data:
             # Save to cache
-            save_analysis_cache("mind_map", response["content"])
+            save_analysis_cache("mind_map", mind_map_data)
             
-            st.subheader("🧠 Interactive Document Mind Map")
+            st.subheader("🧠 Document Mind Map")
             st.caption(f"Analyzing {len(doc_titles)} documents: {', '.join(doc_titles)}")
             
-            # Create visualization (this will trigger parsing with debug in expander)
-            fig = create_mind_map_visualization(response["content"])
-            
-            if fig:
-                # Debug what type of object we got
-                st.write(f"🔧 Debug: fig type = {type(fig)}, PLOTLY_AVAILABLE = {PLOTLY_AVAILABLE}")
-                
-                # Display the mind map
-                if PLOTLY_AVAILABLE and hasattr(fig, 'to_html'):
-                    st.success("🎯 Displaying interactive plotly mind map")
-                    st.plotly_chart(fig, use_container_width=True, key="fresh_mindmap_chart")
-                else:
-                    st.info("📝 Displaying text-based mind map (plotly not available or fig is text)")
-                    st.markdown(fig)  # Display text-based mind map
-                
-                # Instructions
-                st.info("💡 **How to use:** Use the expansion controls below to explore different levels of detail!")
-                
-                # Control buttons
-                if 'current_mindmap_data' in st.session_state:
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        if st.button("🔍 Expand Level 1", key="fresh_expand_l1"):
-                            themes = st.session_state.current_mindmap_data.get('themes', [])
-                            for i, theme in enumerate(themes):
-                                node_id = theme.get('id', f"theme_{i}")
-                                st.session_state.mindmap_expanded_nodes.add(node_id)
-                            st.rerun()
-                    
-                    with col2:
-                        if st.button("🔍 Expand Level 2", key="fresh_expand_l2"):
-                            themes = st.session_state.current_mindmap_data.get('themes', [])
-                            def expand_recursive(theme_list, max_depth, current_depth=0):
-                                if current_depth >= max_depth:
-                                    return
-                                for i, theme in enumerate(theme_list):
-                                    node_id = theme.get('id', f"theme_{i}")
-                                    st.session_state.mindmap_expanded_nodes.add(node_id)
-                                    if 'sub_themes' in theme and theme['sub_themes']:
-                                        expand_recursive(theme['sub_themes'], max_depth, current_depth + 1)
-                            expand_recursive(themes, 2)
-                            st.rerun()
-                    
-                    with col3:
-                        if st.button("🔄 Reset View", key="fresh_collapse_all"):
-                            st.session_state.mindmap_expanded_nodes.clear()
-                            st.rerun()
-            else:
-                st.error("❌ Failed to create mind map visualization")
-                st.write("**Raw AI Response:**")
-                st.text_area("AI Response", response["content"], height=200)
+            # Display the mind map
+            display_mind_map_results(mind_map_data)
         else:
-            st.error(f"❌ **AI Request Failed:** {response.get('error', 'Unknown error')}")
-            st.write("**Debugging Information:**")
-            st.write(f"- Error details: {response.get('error', 'No details available')}")
-            if response.get('content'):
-                st.write("- Partial response received:")
-                st.code(response['content'], language="text")
+            st.error(f"❌ Failed to generate mind map: {mind_map_data['error']}")
     else:
         st.error("❌ No document content available for analysis")
 

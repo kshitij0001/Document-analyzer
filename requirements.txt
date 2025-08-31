@@ -15,3 +15,5 @@ requests
 scikit-learn
 scipy
 streamlit
+fuzzywuzzy
+python-levenshtein
