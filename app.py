@@ -641,12 +641,23 @@ def display_mind_map_results(mind_map_data):
                 </html>
                 """
                 
+                # Simple HTML with working Mermaid rendering
+                simple_html = f"""
+                <div class="mermaid">
+                {mermaid_content}
+                </div>
+                <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+                <script>
+                    mermaid.initialize({{startOnLoad:true, theme: 'default', securityLevel: 'loose'}});
+                </script>
+                """
+                
                 try:
                     # Render with appropriate height and scrolling
-                    streamlit.components.v1.html(mermaid_html, height=600, scrolling=True)
+                    streamlit.components.v1.html(simple_html, height=600, scrolling=True)
                 except Exception as e:
                     st.error(f"❌ Failed to render mermaid component: {str(e)}")
-                    st.info("💡 Fallback: Use the code export below")
+                    st.info("💡 Try copying the code above into Mermaid Live Editor")
         else:
             st.error("❌ Failed to generate valid mermaid diagram content")
             st.info("💡 This might be due to complex content structure. Try using the Tree View instead.")

@@ -603,8 +603,8 @@ Instructions:
         
         def add_node_to_mermaid(node_data: Dict, parent_id: str = "Root", level: int = 1):
             # Create safer node ID - replace problematic characters and ensure uniqueness
-            base_id = node_data["id"].replace("_", "").replace("-", "").replace(" ", "")
-            node_id = f"L{level}{base_id}" if level > 0 else base_id
+            base_id = re.sub(r'[^a-zA-Z0-9]', '', node_data["id"])
+            node_id = f"N{level}_{base_id[:10]}" if level > 0 else base_id[:10]
             
             # Clean node name and escape quotes
             node_name = node_data["name"][:25].replace('"', "'") + ("..." if len(node_data["name"]) > 25 else "")
