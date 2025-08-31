@@ -7,8 +7,30 @@ import json
 import re
 import time
 from typing import Dict, List, Optional, Any, Tuple
-from fuzzywuzzy import fuzz
 import streamlit as st
+
+# Try to import fuzzywuzzy, use simple fallback if not available
+try:
+    from fuzzywuzzy import fuzz
+    FUZZYWUZZY_AVAILABLE = True
+except ImportError:
+    FUZZYWUZZY_AVAILABLE = False
+    # Simple fallback similarity function
+    def fuzz_ratio(a, b):
+        """Simple similarity ratio fallback"""
+        a, b = a.lower().strip(), b.lower().strip()
+        if a == b:
+            return 100
+        if a in b or b in a:
+            return 80
+        # Count common words
+        words_a = set(a.split())
+        words_b = set(b.split())
+        if not words_a or not words_b:
+            return 0
+        common = len(words_a.intersection(words_b))
+        total = len(words_a.union(words_b))
+        return int((common / total) * 100) if total > 0 else 0
 
 class MindMapGenerator:
     """
@@ -20,6 +42,12 @@ class MindMapGenerator:
         """Initialize with the existing AI client."""
         self.ai_client = ai_client
         self.similarity_threshold = 75  # For detecting duplicates
+        
+        # Set up similarity function
+        if FUZZYWUZZY_AVAILABLE:
+            self.similarity_func = fuzz.ratio
+        else:
+            self.similarity_func = fuzz_ratio
         
     def generate_mind_map(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
         """
