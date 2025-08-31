@@ -1,0 +1,269 @@
+2025-08-31 18:17:14.252 Failed to schedule watch observer for path /mount/src/document-analyzer
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/watcher/event_based_path_watcher.py", line 186, in watch_path
+
+    folder_handler.watch = self._observer.schedule(
+
+                           ~~~~~~~~~~~~~~~~~~~~~~~^
+
+        folder_handler, folder_path, recursive=True
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/api.py", line 312, in schedule
+
+    emitter.start()
+
+    ~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/utils/__init__.py", line 75, in start
+
+    self.on_thread_start()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify.py", line 119, in on_thread_start
+
+    self._inotify = InotifyBuffer(path, recursive=self.watch.is_recursive, event_mask=event_mask)
+
+                    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_buffer.py", line 30, in __init__
+
+    self._inotify = Inotify(path, recursive=recursive, event_mask=event_mask)
+
+                    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 149, in __init__
+
+    Inotify._raise_error()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 438, in _raise_error
+
+    raise OSError(errno.EMFILE, "inotify instance limit reached")
+
+OSError: [Errno 24] inotify instance limit reached
+
+2025-08-31 18:17:20.204 Failed to schedule watch observer for path /mount/src/document-analyzer
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/watcher/event_based_path_watcher.py", line 186, in watch_path
+
+    folder_handler.watch = self._observer.schedule(
+
+                           ~~~~~~~~~~~~~~~~~~~~~~~^
+
+        folder_handler, folder_path, recursive=True
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/api.py", line 312, in schedule
+
+    emitter.start()
+
+    ~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/utils/__init__.py", line 75, in start
+
+    self.on_thread_start()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify.py", line 119, in on_thread_start
+
+    self._inotify = InotifyBuffer(path, recursive=self.watch.is_recursive, event_mask=event_mask)
+
+                    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_buffer.py", line 30, in __init__
+
+    self._inotify = Inotify(path, recursive=recursive, event_mask=event_mask)
+
+                    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 149, in __init__
+
+    Inotify._raise_error()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 438, in _raise_error
+
+    raise OSError(errno.EMFILE, "inotify instance limit reached")
+
+OSError: [Errno 24] inotify instance limit reached
+
+2025-08-31 18:17:20.206 Failed to schedule watch observer for path /mount/src/document-analyzer
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/watcher/event_based_path_watcher.py", line 186, in watch_path
+
+    folder_handler.watch = self._observer.schedule(
+
+                           ~~~~~~~~~~~~~~~~~~~~~~~^
+
+        folder_handler, folder_path, recursive=True
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/api.py", line 312, in schedule
+
+    emitter.start()
+
+    ~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/utils/__init__.py", line 75, in start
+
+    self.on_thread_start()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify.py", line 119, in on_thread_start
+
+    self._inotify = InotifyBuffer(path, recursive=self.watch.is_recursive, event_mask=event_mask)
+
+                    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_buffer.py", line 30, in __init__
+
+    self._inotify = Inotify(path, recursive=recursive, event_mask=event_mask)
+
+                    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 149, in __init__
+
+    Inotify._raise_error()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 438, in _raise_error
+
+    raise OSError(errno.EMFILE, "inotify instance limit reached")
+
+OSError: [Errno 24] inotify instance limit reached
+
+2025-08-31 18:17:20.207 Failed to schedule watch observer for path /mount/src/document-analyzer
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/watcher/event_based_path_watcher.py", line 186, in watch_path
+
+    folder_handler.watch = self._observer.schedule(
+
+                           ~~~~~~~~~~~~~~~~~~~~~~~^
+
+        folder_handler, folder_path, recursive=True
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/api.py", line 312, in schedule
+
+    emitter.start()
+
+    ~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/utils/__init__.py", line 75, in start
+
+    self.on_thread_start()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify.py", line 119, in on_thread_start
+
+    self._inotify = InotifyBuffer(path, recursive=self.watch.is_recursive, event_mask=event_mask)
+
+                    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_buffer.py", line 30, in __init__
+
+    self._inotify = Inotify(path, recursive=recursive, event_mask=event_mask)
+
+                    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 149, in __init__
+
+    Inotify._raise_error()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 438, in _raise_error
+
+    raise OSError(errno.EMFILE, "inotify instance limit reached")
+
+OSError: [Errno 24] inotify instance limit reached
+
+2025-08-31 18:17:20.208 Failed to schedule watch observer for path /mount/src/document-analyzer
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/watcher/event_based_path_watcher.py", line 186, in watch_path
+
+    folder_handler.watch = self._observer.schedule(
+
+                           ~~~~~~~~~~~~~~~~~~~~~~~^
+
+        folder_handler, folder_path, recursive=True
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    )
+
+    ^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/api.py", line 312, in schedule
+
+    emitter.start()
+
+    ~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/utils/__init__.py", line 75, in start
+
+    self.on_thread_start()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify.py", line 119, in on_thread_start
+
+    self._inotify = InotifyBuffer(path, recursive=self.watch.is_recursive, event_mask=event_mask)
+
+                    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_buffer.py", line 30, in __init__
+
+    self._inotify = Inotify(path, recursive=recursive, event_mask=event_mask)
+
+                    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 149, in __init__
+
+    Inotify._raise_error()
+
+    ~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/watchdog/observers/inotify_c.py", line 438, in _raise_error
+
+    raise OSError(errno.EMFILE, "inotify instance limit reached")
+
+OSError: [Errno 24] inotify instance limit reached
