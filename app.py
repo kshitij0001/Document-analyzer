@@ -630,7 +630,7 @@ def display_mind_map_results(mind_map_data):
                 
                 try:
                     # Render with appropriate height and scrolling
-                    st.components.v1.html(mermaid_html, height=600, scrolling=True)
+                    streamlit.components.v1.html(mermaid_html, height=600, scrolling=True)
                 except Exception as e:
                     st.error(f"❌ Failed to render mermaid component: {str(e)}")
                     st.info("💡 Fallback: Use the code export below")
@@ -849,7 +849,7 @@ def remove_document(filename):
             # Rebuild vector store with remaining documents
             for fname, doc_info in st.session_state.documents.items():
                 if doc_info["success"]:
-                    st.session_state.vector_store.add_document(fname, doc_info["text"])
+                    st.session_state.vector_store.add_document(doc_info)
             st.success(f"Removed {filename}")
         else:
             st.error(f"Document {filename} not found")
@@ -877,9 +877,7 @@ def upload_document():
                 
                 # Add to vector store if successful
                 if doc_result["success"]:
-                    st.session_state.vector_store.add_document(
-                        uploaded_file.name, doc_result["text"]
-                    )
+                    st.session_state.vector_store.add_document(doc_result)
                     st.success(f"✅ Successfully processed {uploaded_file.name}")
                     st.info(f"📄 {doc_result['word_count']} words, {doc_result['chunk_count']} chunks")
                 else:

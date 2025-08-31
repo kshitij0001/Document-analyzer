@@ -3,4 +3,6 @@
 [x] 3. Restart the workflow to see if the project is working
 [x] 4. Verify the project is working using the feedback tool
 [x] 5. Enhanced AI client to support both Gemini and OpenRouter APIs
-[x] 6. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool
+[x] 6. Fixed VectorStore method compatibility issues  
+[x] 7. Configured Streamlit to run properly on port 5000
+[x] 8. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool

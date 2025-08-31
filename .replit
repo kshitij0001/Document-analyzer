@@ -30,7 +30,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "uv run streamlit run app.py"
+args = "streamlit run app.py"
 waitForPort = 5000
 
 [[ports]]
