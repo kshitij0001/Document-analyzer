@@ -563,7 +563,7 @@ def display_mind_map_results(mind_map_data):
                                     }}
                                     
                                     // Insert the rendered diagram
-                                    diagramElement.innerHTML = '<div class="success-message">✅ Diagram rendered successfully</div>' + result.svg;
+                                    diagramElement.innerHTML = result.svg;
                                     
                                     // Auto-adjust height with proper timing
                                     setTimeout(() => {{
