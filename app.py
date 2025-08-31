@@ -417,6 +417,10 @@ def display_mind_map_results(mind_map_data):
         st.write("**Interactive Mermaid Diagram**")
         mermaid_content = st.session_state.mindmap_generator.export_to_mermaid(mind_map_data)
         
+        # Debug: Show the generated content
+        st.subheader("Generated Mermaid Code:")
+        st.code(mermaid_content, language="mermaid")
+        
         if mermaid_content and len(mermaid_content.strip()) > 10:
             # Show loading message
             with st.spinner("🎨 Rendering interactive diagram..."):
@@ -546,6 +550,15 @@ def display_mind_map_results(mind_map_data):
                             // Create unique ID for this render
                             const uniqueId = 'diagram-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
                             
+                            // Try to parse the diagram first
+                            try {{
+                                await mermaid.parse(diagramContent);
+                                console.log('✅ Diagram syntax is valid');
+                            }} catch (parseError) {{
+                                console.error('❌ Invalid diagram syntax:', parseError);
+                                throw new Error('Invalid Mermaid syntax: ' + parseError.message);
+                            }}
+                            
                             // Render with comprehensive error handling and timeout
                             const renderPromise = mermaid.render(uniqueId, diagramContent);
                             
@@ -563,7 +576,7 @@ def display_mind_map_results(mind_map_data):
                                     }}
                                     
                                     // Insert the rendered diagram
-                                    diagramElement.innerHTML = result.svg;
+                                    diagramElement.innerHTML = '<div class="success-message">✅ Diagram rendered successfully</div>' + result.svg;
                                     
                                     // Auto-adjust height with proper timing
                                     setTimeout(() => {{
