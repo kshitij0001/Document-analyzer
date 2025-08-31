@@ -136,7 +136,7 @@ uv.lock
 
 # Chat history and cache
 chat_history.json
-.streamlit
+.streamlit/
 
 # Progress tracking
 .local/
