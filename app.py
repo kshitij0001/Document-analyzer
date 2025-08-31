@@ -578,30 +578,19 @@ def get_pastel_colors():
         '#FFECB3'   # Light amber
     ]
 
-def create_themes_from_text_with_debug(text_response):
-    """Extract themes from text response when JSON parsing fails - with debugging"""
-    
+def create_themes_from_text(text_response):
+    """Extract themes from text response when JSON parsing fails"""
     try:
-        # Debug information in collapsible section
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            st.write("**Method:** Extracting themes from text patterns")
-        
         # Simple extraction based on common patterns
         lines = text_response.strip().split('\n')
-        
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            st.write(f"Found {len(lines)} lines to analyze")
-        
         themes = []
         current_theme = None
         theme_id = 0
-        processed_lines = 0
         
         for line in lines:
             line = line.strip()
             if not line:
                 continue
-            processed_lines += 1
                 
             # Look for theme indicators (bold text, numbered items, bullet points)
             if any(indicator in line.lower() for indicator in ['theme', 'topic', 'section', 'main', 'key']):
@@ -630,17 +619,10 @@ def create_themes_from_text_with_debug(text_response):
         if current_theme:
             themes.append(current_theme)
         
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            st.write(f"Processed {processed_lines} meaningful lines")
-            st.write(f"Found {len(themes)} main themes from text analysis")
-        
         # If no structured themes found, create some basic ones
         if not themes:
-            with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-                st.warning("No structured themes found, extracting from sentences")
-                # Extract first few sentences as themes
-                sentences = text_response.split('.')[:5]
-                st.write(f"Extracting themes from {len([s for s in sentences if s.strip()])} sentences")
+            # Extract first few sentences as themes
+            sentences = text_response.split('.')[:5]
             for i, sentence in enumerate(sentences):
                 if sentence.strip():
                     themes.append({
@@ -650,23 +632,11 @@ def create_themes_from_text_with_debug(text_response):
                         'sub_themes': []
                     })
         
-        result = {
+        return {
             'title': 'Document Analysis (Text Fallback)',
             'themes': themes
         }
-        
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            if themes:
-                st.success(f"✅ Successfully extracted {len(themes)} themes from text")
-            else:
-                st.error("❌ Failed to extract any themes")
-            
-        return result
-        
-    except Exception as e:
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=True):
-            st.error(f"❌ Text extraction failed: {str(e)}")
-            st.write("Creating emergency fallback theme")
+    except:
         return {
             'title': 'Document Analysis',
             'themes': [{
@@ -678,107 +648,40 @@ def create_themes_from_text_with_debug(text_response):
         }
 
 def parse_mind_map_data(mind_map_data):
-    """Parse AI response into structured mind map data with optional debugging"""
-    
+    """Parse AI response into structured mind map data"""
     try:
-        # Debug information in collapsible section
-        with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-            st.write("**Step 1:** Analyzing AI Response")
-            st.write(f"Response type: {type(mind_map_data)}")
-            st.write(f"Response length: {len(str(mind_map_data))} characters")
-            
-            # Show first 500 characters of response
-            preview = str(mind_map_data)[:500] + ("..." if len(str(mind_map_data)) > 500 else "")
-            st.code(preview, language="text")
+        # Debug: Show what we're trying to parse
+        st.write("🔍 **Debug**: Raw AI response for mind map:")
+        st.text_area("AI Response", str(mind_map_data)[:1000] + "..." if len(str(mind_map_data)) > 1000 else str(mind_map_data))
         
         if isinstance(mind_map_data, str):
             import re
             # Try to find JSON in the response
             json_match = re.search(r'\{.*\}', mind_map_data, re.DOTALL)
             if json_match:
-                with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                    st.success("✅ Found potential JSON structure")
-                
                 try:
-                    json_text = json_match.group()
-                    
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        st.write("**Step 3:** Original JSON found:")
-                        st.code(json_text[:300] + ("..." if len(json_text) > 300 else ""), language="json")
-                        st.write("**Step 4:** Applying JSON fixes")
-                    
-                    # Fix common JSON issues: convert single quotes to double quotes
-                    original_json = json_text
-                    json_text = re.sub(r"'([^']*)':", r'"\1":', json_text)  # Fix property names
-                    json_text = re.sub(r":\s*'([^']*)'", r': "\1"', json_text)  # Fix string values
-                    
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        if original_json != json_text:
-                            st.info("🔧 Applied quote fixes (single → double quotes)")
-                            st.write("Fixed JSON preview:")
-                            st.code(json_text[:300] + ("..." if len(json_text) > 300 else ""), language="json")
-                        else:
-                            st.info("ℹ️ No quote fixes needed")
-                        
-                        st.write("**Step 5:** Parsing JSON")
-                    
-                    parsed_data = json.loads(json_text)
-                    
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        st.success("✅ JSON parsed successfully!")
-                        st.write("**Step 6:** Validating structure")
-                    
+                    parsed_data = json.loads(json_match.group())
                     # Convert old format to new format if needed
                     if 'main_themes' in parsed_data:
-                        with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                            st.info("🔄 Converting old format (main_themes → themes)")
                         parsed_data['themes'] = parsed_data.pop('main_themes')
                     
-                    # Show final structure info
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        st.write("**Final Structure:**")
-                        st.write(f"- Title: {parsed_data.get('title', 'N/A')}")
-                        st.write(f"- Number of main themes: {len(parsed_data.get('themes', []))}")
-                        
-                        # Count total themes and sub-themes
-                        def count_all_themes(themes):
-                            count = len(themes)
-                            for theme in themes:
-                                if theme.get('sub_themes'):
-                                    count += count_all_themes(theme['sub_themes'])
-                            return count
-                        
-                        total_themes = count_all_themes(parsed_data.get('themes', []))
-                        st.write(f"- Total themes (including sub-themes): {total_themes}")
-                        
-                        if total_themes > 0:
-                            st.success("🎉 Mind map data successfully parsed!")
-                        else:
-                            st.warning("⚠️ No themes found in parsed data")
+                    # Debug: Show parsed structure
+                    st.write("✅ **Debug**: Successfully parsed JSON")
+                    st.write(f"Title: {parsed_data.get('title', 'N/A')}")
+                    st.write(f"Number of themes found: {len(parsed_data.get('themes', []))}")
                     
                     return parsed_data
-                        
                 except json.JSONDecodeError as e:
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=True):
-                        st.error(f"❌ **JSON Parse Error:** {str(e)}")
-                        st.write(f"Error at position: {e.pos if hasattr(e, 'pos') else 'unknown'}")
-                        st.write("**Step 7:** Falling back to text extraction")
-                    return create_themes_from_text_with_debug(mind_map_data)
+                    st.error(f"🚨 **Debug**: JSON parsing failed: {str(e)}")
+                    return {"title": "Document Analysis", "themes": []}
             else:
-                with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                    st.warning("⚠️ No JSON structure found in AI response")
-                    st.write("**Step 3:** Falling back to text extraction")
-                return create_themes_from_text_with_debug(mind_map_data)
-        else:
-            with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                st.info("ℹ️ Response is already structured data")
-            return mind_map_data
-            
+                st.warning("🚨 **Debug**: No JSON structure found in AI response")
+                # Try to create themes from text structure
+                return create_themes_from_text(mind_map_data)
+        return mind_map_data
     except Exception as e:
-        with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=True):
-            st.error(f"❌ **Unexpected Error:** {str(e)}")
-            st.write("**Emergency Fallback:** Creating basic structure")
-        return create_themes_from_text_with_debug(str(mind_map_data))
+        st.error(f"🚨 **Debug**: Parsing error: {str(e)}")
+        return {"title": "Document Analysis", "themes": []}
 
 def count_total_nodes(themes, max_level=None, current_level=0):
     """Count total nodes up to a certain level"""
@@ -1195,113 +1098,75 @@ def generate_mind_map():
     generate_fresh_mind_map()
 
 def generate_fresh_mind_map():
-    """Generate fresh mind map analysis with optional debugging"""
+    """Generate fresh mind map analysis"""
     # Clear previous state
     st.session_state.mindmap_expanded_nodes.clear()
     
-    # Combine text from all successful documents
-    all_text = ""
-    doc_titles = []
-    total_chars = 0
-    
-    for filename, doc_info in st.session_state.documents.items():
-        if doc_info["success"]:
-            doc_text = doc_info['text'][:4000]  # Limit to 4000 chars per doc
-            all_text += f"\n\n=== {filename} ===\n{doc_text}"
-            doc_titles.append(filename)
-            total_chars += len(doc_text)
-    
-    # Debug information in collapsible section
-    with st.expander("🔍 **Debug Info** - Mind Map Generation Process", expanded=False):
-        st.write("**Step 1:** Preparing document content")
-        st.write(f"- Documents to analyze: {len(doc_titles)}")
-        st.write(f"- Document names: {', '.join(doc_titles)}")
-        st.write(f"- Total text length: {total_chars:,} characters")
-        st.write(f"- Text preview: {all_text[:200]}...")
+    with st.spinner("Generating comprehensive mind map..."):
+        # Combine text from all successful documents
+        all_text = ""
+        doc_titles = []
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text += f"\n\n=== {filename} ===\n{doc_info['text'][:4000]}"
+                doc_titles.append(filename)
         
         if all_text:
-            st.write("**Step 2:** AI Service Configuration")
-            # Show AI service info
-            service_info = st.session_state.ai_client.get_service_info()
-            st.write(f"- AI Provider: {service_info.get('provider', 'Unknown')}")
-            st.write(f"- Model: {service_info.get('model', 'Unknown')}")
-            st.write(f"- API Status: {service_info.get('api_key_status', 'Unknown')}")
-    
-    if all_text:
-        with st.spinner("🤖 AI is analyzing your documents..."):
             response = st.session_state.ai_client.analyze_document(all_text, "mind_map")
-        
-        # More debug info in the same expander
-        with st.expander("🔍 **Debug Info** - Mind Map Generation Process", expanded=False):
-            st.write("**Step 3:** AI Response Analysis")
-            st.write(f"- Success: {'✅' if response['success'] else '❌'}")
-            st.write(f"- Response length: {len(str(response.get('content', ''))) if response.get('content') else 0} characters")
             
-            if response.get('usage'):
-                st.write(f"- Tokens used: {response['usage']}")
-        
-        if response["success"]:
-            # Save to cache
-            save_analysis_cache("mind_map", response["content"])
-            
-            st.subheader("🧠 Interactive Document Mind Map")
-            st.caption(f"Analyzing {len(doc_titles)} documents: {', '.join(doc_titles)}")
-            
-            # Create visualization (this will trigger parsing with debug in expander)
-            fig = create_mind_map_visualization(response["content"])
-            
-            if fig:
-                # Display the mind map
-                if PLOTLY_AVAILABLE:
-                    st.plotly_chart(fig, use_container_width=True, key="fresh_mindmap_chart")
-                else:
-                    st.markdown(fig)  # Display text-based mind map
+            if response["success"]:
+                # Save to cache
+                save_analysis_cache("mind_map", response["content"])
                 
-                # Instructions
-                st.info("💡 **How to use:** Use the expansion controls below to explore different levels of detail!")
+                st.subheader("🧠 Interactive Document Mind Map")
+                st.caption(f"Analyzing {len(doc_titles)} documents: {', '.join(doc_titles)}")
                 
-                # Control buttons
-                if 'current_mindmap_data' in st.session_state:
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        if st.button("🔍 Expand Level 1", key="fresh_expand_l1"):
-                            themes = st.session_state.current_mindmap_data.get('themes', [])
-                            for i, theme in enumerate(themes):
-                                node_id = theme.get('id', f"theme_{i}")
-                                st.session_state.mindmap_expanded_nodes.add(node_id)
-                            st.rerun()
+                # Create visualization
+                fig = create_mind_map_visualization(response["content"])
+                if fig:
+                    # Display the mind map
+                    if PLOTLY_AVAILABLE:
+                        st.plotly_chart(fig, use_container_width=True, key="fresh_mindmap_chart")
+                    else:
+                        st.markdown(fig)  # Display text-based mind map
                     
-                    with col2:
-                        if st.button("🔍 Expand Level 2", key="fresh_expand_l2"):
-                            themes = st.session_state.current_mindmap_data.get('themes', [])
-                            def expand_recursive(theme_list, max_depth, current_depth=0):
-                                if current_depth >= max_depth:
-                                    return
-                                for i, theme in enumerate(theme_list):
+                    # Instructions
+                    st.info("💡 **How to use:** Use the expansion controls below to explore different levels of detail!")
+                    
+                    # Control buttons
+                    if 'current_mindmap_data' in st.session_state:
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            if st.button("🔍 Expand Level 1", key="fresh_expand_l1"):
+                                themes = st.session_state.current_mindmap_data.get('themes', [])
+                                for i, theme in enumerate(themes):
                                     node_id = theme.get('id', f"theme_{i}")
                                     st.session_state.mindmap_expanded_nodes.add(node_id)
-                                    if 'sub_themes' in theme and theme['sub_themes']:
-                                        expand_recursive(theme['sub_themes'], max_depth, current_depth + 1)
-                            expand_recursive(themes, 2)
-                            st.rerun()
-                    
-                    with col3:
-                        if st.button("🔄 Reset View", key="fresh_collapse_all"):
-                            st.session_state.mindmap_expanded_nodes.clear()
-                            st.rerun()
+                                st.rerun()
+                        
+                        with col2:
+                            if st.button("🔍 Expand Level 2", key="fresh_expand_l2"):
+                                themes = st.session_state.current_mindmap_data.get('themes', [])
+                                def expand_recursive(theme_list, max_depth, current_depth=0):
+                                    if current_depth >= max_depth:
+                                        return
+                                    for i, theme in enumerate(theme_list):
+                                        node_id = theme.get('id', f"theme_{i}")
+                                        st.session_state.mindmap_expanded_nodes.add(node_id)
+                                        if 'sub_themes' in theme and theme['sub_themes']:
+                                            expand_recursive(theme['sub_themes'], max_depth, current_depth + 1)
+                                expand_recursive(themes, 2)
+                                st.rerun()
+                        
+                        with col3:
+                            if st.button("🔄 Reset View", key="fresh_collapse_all"):
+                                st.session_state.mindmap_expanded_nodes.clear()
+                                st.rerun()
+                else:
+                    st.write(response["content"])
             else:
-                st.error("❌ Failed to create mind map visualization")
-                st.write("**Raw AI Response:**")
-                st.text_area("AI Response", response["content"], height=200)
-        else:
-            st.error(f"❌ **AI Request Failed:** {response.get('error', 'Unknown error')}")
-            st.write("**Debugging Information:**")
-            st.write(f"- Error details: {response.get('error', 'No details available')}")
-            if response.get('content'):
-                st.write("- Partial response received:")
-                st.code(response['content'], language="text")
-    else:
-        st.error("❌ No document content available for analysis")
+                st.error(f"Failed to generate mind map: {response['error']}")
+                st.error("Please check your API key configuration and try again.")
 
 if __name__ == "__main__":
     main()
