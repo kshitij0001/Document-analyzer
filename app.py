@@ -470,7 +470,13 @@ def generate_document_summary():
         st.write(cached_result["content"])
         
         if st.button("🔄 Regenerate Summary"):
-            generate_fresh_summary()
+            # Clear the cache entry first
+            documents_hash = get_documents_hash()
+            personality = st.session_state.ai_client.current_personality
+            cache_key = get_cache_key(documents_hash, "summary", personality)
+            if cache_key in st.session_state.cached_analyses:
+                del st.session_state.cached_analyses[cache_key]
+            st.rerun()  # Refresh to trigger regeneration
         return
     
     generate_fresh_summary()
@@ -493,6 +499,7 @@ def generate_fresh_summary():
                 
                 st.subheader("📝 Document Summary")
                 st.write(response["content"])
+                st.rerun()  # Refresh to show new content
             else:
                 st.error(f"Failed to generate summary: {response['error']}")
 
@@ -510,7 +517,13 @@ def extract_key_points():
         st.write(cached_result["content"])
         
         if st.button("🔄 Regenerate Key Points"):
-            generate_fresh_key_points()
+            # Clear the cache entry first
+            documents_hash = get_documents_hash()
+            personality = st.session_state.ai_client.current_personality
+            cache_key = get_cache_key(documents_hash, "key_points", personality)
+            if cache_key in st.session_state.cached_analyses:
+                del st.session_state.cached_analyses[cache_key]
+            st.rerun()  # Refresh to trigger regeneration
         return
     
     generate_fresh_key_points()
@@ -533,6 +546,7 @@ def generate_fresh_key_points():
                 
                 st.subheader("🎯 Key Points")
                 st.write(response["content"])
+                st.rerun()  # Refresh to show new content
             else:
                 st.error(f"Failed to extract key points: {response['error']}")
 
@@ -550,7 +564,13 @@ def analyze_sentiment():
         st.write(cached_result["content"])
         
         if st.button("🔄 Regenerate Sentiment Analysis"):
-            generate_fresh_sentiment()
+            # Clear the cache entry first
+            documents_hash = get_documents_hash()
+            personality = st.session_state.ai_client.current_personality
+            cache_key = get_cache_key(documents_hash, "sentiment", personality)
+            if cache_key in st.session_state.cached_analyses:
+                del st.session_state.cached_analyses[cache_key]
+            st.rerun()  # Refresh to trigger regeneration
         return
     
     generate_fresh_sentiment()
@@ -573,6 +593,7 @@ def generate_fresh_sentiment():
                 
                 st.subheader("📈 Sentiment Analysis")
                 st.write(response["content"])
+                st.rerun()  # Refresh to show new content
             else:
                 st.error(f"Failed to analyze sentiment: {response['error']}")
 
@@ -595,56 +616,33 @@ def get_pastel_colors():
     ]
 
 def show_global_debug_panel():
-    """Display global debug panel in bottom left corner"""
-    
-    # CSS for bottom-left debug button and panel
-    st.html("""
-    <style>
-    .debug-button {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        z-index: 1000;
-        background: #FF6B6B;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        font-size: 18px;
-        cursor: pointer;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-    }
-    .debug-button:hover {
-        background: #FF5252;
-        transform: scale(1.05);
-    }
-    </style>
-    """)
+    """Display global debug panel in sidebar"""
     
     # Create debug info container in sidebar
     with st.sidebar:
-        if st.button("🐛", help="Debug Information", key="debug_toggle"):
-            st.session_state.show_debug_panel = not st.session_state.get('show_debug_panel', False)
+        st.markdown("---")
+        st.subheader("🐛 Debug Panel")
         
-        if st.session_state.get('show_debug_panel', False):
-            with st.expander("🔧 Global Debug Information", expanded=True):
+        # Show debug toggle
+        debug_expanded = st.checkbox("Show Debug Information", key="debug_toggle")
+        
+        if debug_expanded:
+            # Combine all debug info
+            all_debug = []
+            if 'mindmap_debug_info' in st.session_state:
+                all_debug.extend(st.session_state.mindmap_debug_info)
+            if 'global_debug_info' in st.session_state:
+                all_debug.extend(st.session_state.global_debug_info)
+            
+            if all_debug:
+                st.caption(f"Debug Log ({len(all_debug)} entries)")
                 
-                # Combine all debug info
-                all_debug = []
-                if 'mindmap_debug_info' in st.session_state:
-                    all_debug.extend(st.session_state.mindmap_debug_info)
-                if 'global_debug_info' in st.session_state:
-                    all_debug.extend(st.session_state.global_debug_info)
-                
-                if all_debug:
-                    st.caption(f"Debug Log ({len(all_debug)} entries)")
-                    
-                    # Show recent debug items
-                    for item in all_debug[-30:]:  # Show last 30 debug items
+                # Show recent debug items in a scrollable container
+                with st.container():
+                    st.markdown("**Recent Debug Information:**")
+                    for item in all_debug[-20:]:  # Show last 20 debug items
                         if item.startswith("**"):
-                            st.write(f"### {item}")
+                            st.markdown(f"**{item}**")
                         elif "❌" in item or "ERROR" in item.upper():
                             st.error(item)
                         elif "✅" in item or "SUCCESS" in item.upper():
@@ -652,25 +650,27 @@ def show_global_debug_panel():
                         elif "⚠️" in item or "WARNING" in item.upper():
                             st.warning(item)
                         else:
-                            st.write(f"- {item}")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("Clear Debug", key="clear_debug"):
-                            st.session_state.mindmap_debug_info = []
-                            st.session_state.global_debug_info = []
-                            st.rerun()
-                    with col2:
-                        if st.button("Export Debug", key="export_debug"):
-                            debug_text = "\n".join(all_debug)
-                            st.download_button(
-                                "Download Debug Log",
-                                debug_text,
-                                "debug_log.txt",
-                                "text/plain"
-                            )
-                else:
-                    st.info("No debug information available")
+                            st.text(f"• {item}")
+                
+                # Action buttons
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Clear Debug", key="clear_debug"):
+                        st.session_state.mindmap_debug_info = []
+                        st.session_state.global_debug_info = []
+                        st.rerun()
+                with col2:
+                    debug_text = "\n".join(all_debug)
+                    st.download_button(
+                        "📄 Export",
+                        debug_text,
+                        "debug_log.txt",
+                        "text/plain",
+                        key="export_debug"
+                    )
+            else:
+                st.info("No debug information available yet.")
+                st.caption("Debug info will appear here after you use analysis features.")
 
 def create_themes_from_text_with_debug(text_response):
     """Extract themes from text response when JSON parsing fails - with debugging"""
@@ -1283,8 +1283,13 @@ def generate_mind_map():
             st.caption("✅ Cached result from previous analysis")
         with col2:
             if st.button("🔄 Regenerate", key="regen_mindmap"):
-                generate_fresh_mind_map()
-                st.rerun()
+                # Clear the cache entry first
+                documents_hash = get_documents_hash()
+                personality = st.session_state.ai_client.current_personality
+                cache_key = get_cache_key(documents_hash, "mind_map", personality)
+                if cache_key in st.session_state.cached_analyses:
+                    del st.session_state.cached_analyses[cache_key]
+                st.rerun()  # Refresh to trigger regeneration
         
         # Create visualization
         fig = create_mind_map_visualization(cached_result["content"])
