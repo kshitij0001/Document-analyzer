@@ -650,38 +650,34 @@ def create_themes_from_text(text_response):
 def parse_mind_map_data(mind_map_data):
     """Parse AI response into structured mind map data"""
     try:
-        # Debug: Show what we're trying to parse
-        st.write("🔍 **Debug**: Raw AI response for mind map:")
-        st.text_area("AI Response", str(mind_map_data)[:1000] + "..." if len(str(mind_map_data)) > 1000 else str(mind_map_data))
-        
         if isinstance(mind_map_data, str):
             import re
             # Try to find JSON in the response
             json_match = re.search(r'\{.*\}', mind_map_data, re.DOTALL)
             if json_match:
                 try:
-                    parsed_data = json.loads(json_match.group())
+                    json_text = json_match.group()
+                    # Fix common JSON issues: convert single quotes to double quotes
+                    # But be careful not to change quotes inside strings
+                    json_text = re.sub(r"'([^']*)':", r'"\1":', json_text)  # Fix property names
+                    json_text = re.sub(r":\s*'([^']*)'", r': "\1"', json_text)  # Fix string values
+                    
+                    parsed_data = json.loads(json_text)
+                    
                     # Convert old format to new format if needed
                     if 'main_themes' in parsed_data:
                         parsed_data['themes'] = parsed_data.pop('main_themes')
                     
-                    # Debug: Show parsed structure
-                    st.write("✅ **Debug**: Successfully parsed JSON")
-                    st.write(f"Title: {parsed_data.get('title', 'N/A')}")
-                    st.write(f"Number of themes found: {len(parsed_data.get('themes', []))}")
-                    
                     return parsed_data
                 except json.JSONDecodeError as e:
-                    st.error(f"🚨 **Debug**: JSON parsing failed: {str(e)}")
-                    return {"title": "Document Analysis", "themes": []}
+                    # If JSON parsing still fails, try text extraction
+                    return create_themes_from_text(mind_map_data)
             else:
-                st.warning("🚨 **Debug**: No JSON structure found in AI response")
-                # Try to create themes from text structure
+                # No JSON found, try text extraction
                 return create_themes_from_text(mind_map_data)
         return mind_map_data
     except Exception as e:
-        st.error(f"🚨 **Debug**: Parsing error: {str(e)}")
-        return {"title": "Document Analysis", "themes": []}
+        return create_themes_from_text(str(mind_map_data))
 
 def count_total_nodes(themes, max_level=None, current_level=0):
     """Count total nodes up to a certain level"""
