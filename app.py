@@ -25,7 +25,7 @@ except Exception as e:
     go = None
     make_subplots = None
 
-# Helper functions for caching
+# Helper functions for caching and chat persistence
 def load_cached_analyses():
     """Load cached analysis results from session state"""
     return {}
@@ -34,6 +34,34 @@ def save_cached_analyses(cache_data):
     """Save cached analysis results to session state"""
     if "cached_analyses" in st.session_state:
         st.session_state.cached_analyses = cache_data
+
+def load_chat_history():
+    """Load chat history from persistent storage"""
+    try:
+        if os.path.exists("chat_history.json"):
+            with open("chat_history.json", "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        st.error(f"Error loading chat history: {e}")
+    return []
+
+def save_chat_history():
+    """Save chat history to persistent storage"""
+    try:
+        with open("chat_history.json", "w", encoding="utf-8") as f:
+            json.dump(st.session_state.chat_history, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        st.error(f"Error saving chat history: {e}")
+
+def clear_persistent_chat():
+    """Clear persistent chat history"""
+    try:
+        if os.path.exists("chat_history.json"):
+            os.remove("chat_history.json")
+        st.session_state.chat_history = []
+        st.session_state.ai_client.clear_conversation_history()
+    except Exception as e:
+        st.error(f"Error clearing chat history: {e}")
 
 def get_cache_key(documents_hash, analysis_type, personality):
     """Generate a unique cache key for analysis results"""
@@ -106,7 +134,7 @@ if "mindmap_generator" not in st.session_state:
 if "documents" not in st.session_state:
     st.session_state.documents = {}
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+    st.session_state.chat_history = load_chat_history()
 if "current_document" not in st.session_state:
     st.session_state.current_document = None
 if "cached_analyses" not in st.session_state:
@@ -272,6 +300,8 @@ def explore_topic_in_chat(topic_data):
                 "content": response["content"],
                 "personality": personality_name
             })
+            # Save chat history persistently
+            save_chat_history()
             st.success(f"Added detailed discussion about '{topic_name}' to the chat!")
             st.rerun()
         else:
@@ -455,8 +485,7 @@ def main():
         
         # Clear chat history
         if st.button("🗑️ Clear Chat History"):
-            st.session_state.chat_history = []
-            st.session_state.ai_client.clear_conversation_history()
+            clear_persistent_chat()
             st.success("Chat history cleared!")
     
     # Main content area
@@ -611,6 +640,8 @@ def handle_user_question(question):
                 "personality": "System"
             })
     
+    # Save chat history persistently
+    save_chat_history()
     st.rerun()
 
 def generate_document_summary():
@@ -1385,6 +1416,8 @@ def generate_focused_notes(node_data):
                 "content": response["content"],
                 "personality": personality_name
             })
+            # Save chat history persistently
+            save_chat_history()
             st.success(f"Generated detailed notes for '{topic_name}' - check the chat!")
         else:
             st.error(f"Failed to generate notes: {response['error']}")
