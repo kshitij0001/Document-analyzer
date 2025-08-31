@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 # AI Document Analyzer & Chat - Main Streamlit Application
 # A NotebookLM-inspired document analysis tool with AI chat capabilities
 
@@ -12,6 +13,7 @@ from document_processor import DocumentProcessor
 from vector_store import VectorStore
 from ai_client import AIClient
 from mindmap_generator import MindMapGenerator
+
 # Optional plotly imports for mind map visualization
 try:
     import plotly.graph_objects as go
@@ -87,7 +89,6 @@ def get_cached_analysis(analysis_type):
         documents_hash = get_documents_hash()
         personality = st.session_state.ai_client.current_personality
         cache_key = get_cache_key(documents_hash, analysis_type, personality)
-        
         cached_data = st.session_state.cached_analyses.get(cache_key)
         if cached_data:
             return cached_data
@@ -103,17 +104,254 @@ def save_analysis_cache(analysis_type, content):
         documents_hash = get_documents_hash()
         personality = st.session_state.ai_client.current_personality
         cache_key = get_cache_key(documents_hash, analysis_type, personality)
-        
         cache_entry = {
             "content": content,
             "timestamp": time.time(),
             "personality": personality,
             "analysis_type": analysis_type
         }
-        
         st.session_state.cached_analyses[cache_key] = cache_entry
     except Exception as e:
         st.error(f"Error saving analysis cache: {e}")
+
+# FIXED: Regenerate button callback functions
+def regenerate_summary():
+    """Callback to regenerate summary"""
+    clear_analysis_cache("summary")
+    st.session_state.force_regenerate_summary = True
+
+def regenerate_key_points():
+    """Callback to regenerate key points"""
+    clear_analysis_cache("key_points")
+    st.session_state.force_regenerate_key_points = True
+
+def regenerate_sentiment():
+    """Callback to regenerate sentiment"""
+    clear_analysis_cache("sentiment")
+    st.session_state.force_regenerate_sentiment = True
+
+def regenerate_mindmap():
+    """Callback to regenerate mind map"""
+    clear_analysis_cache("mind_map")
+    st.session_state.force_regenerate_mindmap = True
+
+def clear_analysis_cache(analysis_type):
+    """Clear cache for specific analysis type"""
+    try:
+        documents_hash = get_documents_hash()
+        personality = st.session_state.ai_client.current_personality
+        cache_key = get_cache_key(documents_hash, analysis_type, personality)
+        if cache_key in st.session_state.cached_analyses:
+            del st.session_state.cached_analyses[cache_key]
+    except Exception as e:
+        st.error(f"Error clearing cache: {e}")
+
+# FIXED: Interactive button callback functions
+def explore_topic_callback(topic_data):
+    """Callback for explore topic button"""
+    st.session_state.pending_exploration = {
+        "topic": topic_data,
+        "action": "explore",
+        "timestamp": time.time()
+    }
+
+def generate_details_callback(topic_data):
+    """Callback for generate details button"""
+    st.session_state.pending_details = {
+        "topic": topic_data,
+        "action": "details",
+        "timestamp": time.time()
+    }
+
+def comprehensive_analysis_callback(theme_data):
+    """Callback for comprehensive analysis button"""
+    st.session_state.pending_analysis = {
+        "topic": theme_data,
+        "action": "analysis",
+        "timestamp": time.time()
+    }
+
+def extract_data_points_callback(theme_data):
+    """Callback for extract data points button"""
+    st.session_state.pending_data_extraction = {
+        "topic": theme_data,
+        "action": "data_extraction",
+        "timestamp": time.time()
+    }
+
+def discuss_theme_callback(theme_data):
+    """Callback for discuss theme button"""
+    st.session_state.pending_discussion = {
+        "topic": theme_data,
+        "action": "discussion",
+        "timestamp": time.time()
+    }
+
+# FIXED: Action handlers
+def handle_pending_actions():
+    """Handle any pending actions set by button callbacks"""
+    
+    # Handle exploration
+    if "pending_exploration" in st.session_state:
+        action = st.session_state.pending_exploration
+        del st.session_state.pending_exploration
+        
+        topic = action["topic"]
+        question = f"Tell me more about '{topic['name']}'. {topic.get('summary', '')} What are the key insights and details I should know?"
+        
+        # Add to chat
+        if "chat_messages" not in st.session_state:
+            st.session_state.chat_messages = []
+        st.session_state.chat_messages.append({"role": "user", "message": question})
+        st.success(f"💬 Started exploration of '{topic['name']}' - check the Chat tab!")
+    
+    # Handle details
+    if "pending_details" in st.session_state:
+        action = st.session_state.pending_details
+        del st.session_state.pending_details
+        perform_details_generation(action["topic"])
+    
+    # Handle analysis
+    if "pending_analysis" in st.session_state:
+        action = st.session_state.pending_analysis
+        del st.session_state.pending_analysis
+        perform_comprehensive_analysis(action["topic"])
+    
+    # Handle data extraction
+    if "pending_data_extraction" in st.session_state:
+        action = st.session_state.pending_data_extraction
+        del st.session_state.pending_data_extraction
+        perform_data_extraction(action["topic"])
+    
+    # Handle discussion
+    if "pending_discussion" in st.session_state:
+        action = st.session_state.pending_discussion
+        del st.session_state.pending_discussion
+        
+        topic = action["topic"]
+        question = f"Let's discuss '{topic['name']}' in detail. {topic.get('summary', '')} What are the key aspects and implications?"
+        
+        if "chat_messages" not in st.session_state:
+            st.session_state.chat_messages = []
+        st.session_state.chat_messages.append({"role": "user", "message": question})
+        st.success(f"💬 Started discussion about '{topic['name']}' - check the Chat tab!")
+
+def perform_comprehensive_analysis(theme_data):
+    """Perform comprehensive analysis and display results"""
+    try:
+        all_text = []
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text.append(doc_info["text"])
+        
+        if not all_text:
+            st.warning("No documents available for analysis")
+            return
+            
+        combined_text = "\n\n".join(all_text)
+        theme_name = theme_data["name"]
+        
+        with st.spinner(f"🔍 Analyzing '{theme_name}'..."):
+            analysis_prompt = f"""Provide a comprehensive analysis of '{theme_name}' based on the document content.
+            
+            Include:
+            1. Overview and background
+            2. Key findings and insights
+            3. Supporting evidence from documents
+            4. Implications and significance
+            5. Related concepts and connections
+            
+            Document content: {combined_text[:10000]}"""
+            
+            response = st.session_state.ai_client._make_api_request(
+                messages=[{"role": "user", "content": analysis_prompt}],
+                max_tokens=2000,
+                temperature=0.7
+            )
+            
+            if response["success"]:
+                st.success(f"🔍 Comprehensive Analysis: {theme_name}")
+                st.write(response["content"])
+            else:
+                st.error(f"Analysis failed: {response.get('error', 'Unknown error')}")
+                
+    except Exception as e:
+        st.error(f"Error in comprehensive analysis: {str(e)}")
+
+def perform_data_extraction(theme_data):
+    """Extract data points and display results"""
+    try:
+        all_text = []
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text.append(doc_info["text"])
+        
+        combined_text = "\n\n".join(all_text)
+        theme_name = theme_data["name"]
+        
+        with st.spinner(f"📊 Extracting data for '{theme_name}'..."):
+            data_prompt = f"""Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'.
+            
+            Format as organized bullet points:
+            • **Data Point**: [Specific fact/number/date]
+            • **Statistic**: [Another specific fact]
+            
+            Document content: {combined_text[:10000]}"""
+            
+            response = st.session_state.ai_client._make_api_request(
+                messages=[{"role": "user", "content": data_prompt}],
+                max_tokens=1500,
+                temperature=0.3
+            )
+            
+            if response["success"]:
+                st.success(f"📊 Data Points: {theme_name}")
+                st.write(response["content"])
+            else:
+                st.error(f"Data extraction failed: {response.get('error', 'Unknown error')}")
+                
+    except Exception as e:
+        st.error(f"Error in data extraction: {str(e)}")
+
+def perform_details_generation(sub_theme_data):
+    """Generate detailed notes and display results"""
+    try:
+        all_text = []
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text.append(doc_info["text"])
+        
+        combined_text = "\n\n".join(all_text)
+        topic_name = sub_theme_data["name"]
+        
+        with st.spinner(f"📋 Generating details for '{topic_name}'..."):
+            details_prompt = f"""Generate comprehensive, detailed notes about '{topic_name}' based on the document content.
+            
+            Include:
+            1. Detailed explanation of the concept
+            2. Specific examples from the documents
+            3. Step-by-step processes if applicable
+            4. Key relationships and dependencies
+            5. Important considerations
+            
+            Format as clear, organized notes with headers and bullet points.
+            
+            Document content: {combined_text[:10000]}"""
+            
+            response = st.session_state.ai_client._make_api_request(
+                messages=[{"role": "user", "content": details_prompt}],
+                max_tokens=2000,
+                temperature=0.5
+            )
+            
+            if response["success"]:
+                st.success(f"📋 Detailed Notes: {topic_name}")
+                st.write(response["content"])
+            else:
+                st.error(f"Details generation failed: {response.get('error', 'Unknown error')}")
+                
+    except Exception as e:
+        st.error(f"Error in details generation: {str(e)}")
 
 # Page configuration
 st.set_page_config(
@@ -149,7 +387,7 @@ def display_mind_map_results(mind_map_data):
         st.error("Mind map data is in text format, not structured data")
         st.text_area("Raw Response", mind_map_data, height=200)
         return
-    
+        
     if "error" in mind_map_data:
         st.error(f"Error in mind map data: {mind_map_data['error']}")
         return
@@ -179,84 +417,229 @@ def display_mind_map_results(mind_map_data):
         st.write("**Interactive Mermaid Diagram**")
         mermaid_content = st.session_state.mindmap_generator.export_to_mermaid(mind_map_data)
         
-        # Create interactive Mermaid diagram
-        # Check if mermaid content is valid before rendering
         if mermaid_content and len(mermaid_content.strip()) > 10:
-            mermaid_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <script src="https://cdn.jsdelivr.net/npm/mermaid@11.0.0/dist/mermaid.min.js"></script>
-                <style>
-                    body {{
-                        margin: 0;
-                        padding: 20px;
-                        font-family: Arial, sans-serif;
-                        background: white;
-                    }}
-                    .mermaid {{
-                        text-align: center;
-                        background: white;
-                        min-height: 400px;
-                        width: 100%;
-                    }}
-                    .mermaid svg {{
-                        max-width: 100%;
-                        height: auto;
-                        background: white;
-                    }}
-                    .error-message {{
-                        color: red;
-                        padding: 20px;
-                        text-align: center;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="mermaid" id="mermaid-diagram">
-{mermaid_content}
-                </div>
-                <script>
-                    // Enhanced mermaid initialization with error handling
-                    try {{
-                        mermaid.initialize({{
-                            startOnLoad: false,
-                            theme: 'default',
-                            flowchart: {{
-                                useMaxWidth: true,
-                                htmlLabels: true,
-                                curve: 'linear'
-                            }},
-                            securityLevel: 'loose',
-                            suppressErrorRendering: false
+            # Show loading message
+            with st.spinner("🎨 Rendering interactive diagram..."):
+                
+                # FIXED: Enhanced mermaid HTML with comprehensive fixes
+                mermaid_html = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+                    <style>
+                        body {{
+                            margin: 0;
+                            padding: 20px;
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            background: white;
+                            overflow: auto;
+                            box-sizing: border-box;
+                        }}
+                        .mermaid-container {{
+                            width: 100%;
+                            min-height: 400px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: white;
+                            border: 1px solid #e0e0e0;
+                            border-radius: 8px;
+                            padding: 20px;
+                        }}
+                        .mermaid {{
+                            width: 100%;
+                            text-align: center;
+                            background: white;
+                        }}
+                        .mermaid svg {{
+                            max-width: 100%;
+                            height: auto;
+                            background: white;
+                            display: block;
+                            margin: 0 auto;
+                        }}
+                        .error-message {{
+                            color: #ff4444;
+                            font-weight: bold;
+                            padding: 20px;
+                            text-align: center;
+                            border: 2px solid #ff4444;
+                            border-radius: 8px;
+                            background: #fff5f5;
+                            max-width: 500px;
+                            margin: 0 auto;
+                        }}
+                        .loading {{
+                            color: #666;
+                            font-style: italic;
+                            padding: 20px;
+                            text-align: center;
+                            font-size: 16px;
+                        }}
+                        .success-message {{
+                            color: #00aa00;
+                            font-weight: bold;
+                            text-align: center;
+                            margin-bottom: 10px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="mermaid-container">
+                        <div class="mermaid" id="mermaid-diagram">
+                            <div class="loading">🎨 Initializing diagram renderer...</div>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        console.log('Starting enhanced Mermaid initialization...');
+                        
+                        // Global error handler
+                        window.addEventListener('error', function(e) {{
+                            console.error('Global error:', e.error);
                         }});
                         
-                        // Parse and render the diagram
-                        const diagramElement = document.getElementById('mermaid-diagram');
-                        mermaid.run({{
-                            nodes: [diagramElement]
-                        }}).then(() => {{
-                            console.log('Mermaid diagram rendered successfully');
-                        }}).catch((error) => {{
-                            console.error('Mermaid rendering error:', error);
-                            diagramElement.innerHTML = '<div class="error-message">Failed to render diagram. Please check the mermaid code format.</div>';
-                        }});
-                    }} catch (error) {{
-                        console.error('Mermaid initialization error:', error);
-                        document.getElementById('mermaid-diagram').innerHTML = '<div class="error-message">Failed to initialize diagram renderer.</div>';
-                    }}
-                </script>
-            </body>
-            </html>
-            """
-            
-            streamlit.components.v1.html(mermaid_html, height=700, scrolling=True)
+                        try {{
+                            // Enhanced mermaid configuration
+                            mermaid.initialize({{
+                                startOnLoad: false,
+                                theme: 'default',
+                                flowchart: {{
+                                    useMaxWidth: true,
+                                    htmlLabels: false,
+                                    curve: 'basis',
+                                    padding: 20
+                                }},
+                                securityLevel: 'loose',
+                                fontSize: 14,
+                                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+                                wrap: true,
+                                deterministicIds: true
+                            }});
+                            
+                            console.log('✅ Mermaid initialized successfully');
+                            
+                            // Prepare and validate content
+                            const diagramContent = `{mermaid_content}`.trim();
+                            console.log('📄 Diagram content length:', diagramContent.length);
+                            console.log('📄 Diagram preview:', diagramContent.substring(0, 150) + '...');
+                            
+                            // Enhanced syntax validation
+                            const validStarters = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'pie', 'journey', 'gantt'];
+                            const contentLower = diagramContent.toLowerCase();
+                            const hasValidStart = validStarters.some(starter => contentLower.startsWith(starter));
+                            
+                            if (!hasValidStart) {{
+                                throw new Error(`Invalid diagram syntax. Must start with: ${{validStarters.join(', ')}}`);
+                            }}
+                            
+                            if (diagramContent.length < 10) {{
+                                throw new Error('Diagram content too short');
+                            }}
+                            
+                            const diagramElement = document.getElementById('mermaid-diagram');
+                            diagramElement.innerHTML = '<div class="loading">🎨 Rendering diagram...</div>';
+                            
+                            // Create unique ID for this render
+                            const uniqueId = 'diagram-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                            
+                            // Render with comprehensive error handling and timeout
+                            const renderPromise = mermaid.render(uniqueId, diagramContent);
+                            
+                            const timeoutPromise = new Promise((_, reject) => {{
+                                setTimeout(() => reject(new Error('Rendering timeout after 10 seconds')), 10000);
+                            }});
+                            
+                            Promise.race([renderPromise, timeoutPromise])
+                                .then((result) => {{
+                                    console.log('✅ Mermaid rendering completed successfully');
+                                    
+                                    // Validate the result
+                                    if (!result || !result.svg) {{
+                                        throw new Error('Empty or invalid rendering result');
+                                    }}
+                                    
+                                    // Insert the rendered diagram
+                                    diagramElement.innerHTML = '<div class="success-message">✅ Diagram rendered successfully</div>' + result.svg;
+                                    
+                                    // Auto-adjust height with proper timing
+                                    setTimeout(() => {{
+                                        const svg = diagramElement.querySelector('svg');
+                                        if (svg) {{
+                                            try {{
+                                                // Get the bounding box for accurate sizing
+                                                const bbox = svg.getBBox();
+                                                const padding = 100;
+                                                const minHeight = 450;
+                                                const calculatedHeight = Math.max(minHeight, bbox.height + padding);
+                                                
+                                                console.log('📏 Calculated diagram height:', calculatedHeight);
+                                                
+                                                // Set container and body height
+                                                document.body.style.height = calculatedHeight + 'px';
+                                                document.querySelector('.mermaid-container').style.minHeight = calculatedHeight + 'px';
+                                                
+                                                // Notify Streamlit of height change
+                                                if (window.parent && window.parent.postMessage) {{
+                                                    window.parent.postMessage({{
+                                                        type: 'streamlit:setFrameHeight',
+                                                        height: calculatedHeight
+                                                    }}, '*');
+                                                    console.log('📡 Height notification sent to Streamlit');
+                                                }}
+                                            }} catch (sizeError) {{
+                                                console.warn('Height calculation failed:', sizeError);
+                                                // Use default height
+                                                document.body.style.height = '600px';
+                                            }}
+                                        }} else {{
+                                            console.warn('SVG element not found for sizing');
+                                        }}
+                                    }}, 300);
+                                    
+                                }})
+                                .catch((error) => {{
+                                    console.error('❌ Mermaid rendering failed:', error);
+                                    diagramElement.innerHTML = `
+                                        <div class="error-message">
+                                            <strong>🚫 Failed to render diagram</strong><br><br>
+                                            <strong>Error:</strong> ${{error.message}}<br><br>
+                                            <em>Troubleshooting:</em><br>
+                                            • Check the Tree View tab for content<br>
+                                            • Try regenerating the mind map<br>
+                                            • Use the export code below for external rendering
+                                        </div>`;
+                                }});
+                                
+                        }} catch (initError) {{
+                            console.error('❌ Mermaid initialization failed:', initError);
+                            document.getElementById('mermaid-diagram').innerHTML = `
+                                <div class="error-message">
+                                    <strong>🚫 Failed to initialize diagram renderer</strong><br><br>
+                                    <strong>Error:</strong> ${{initError.message}}<br><br>
+                                    <em>Please try refreshing the page or use the Tree View instead.</em>
+                                </div>`;
+                        }}
+                    </script>
+                </body>
+                </html>
+                """
+                
+                try:
+                    # Render with appropriate height and scrolling
+                    st.components.v1.html(mermaid_html, height=600, scrolling=True)
+                except Exception as e:
+                    st.error(f"❌ Failed to render mermaid component: {str(e)}")
+                    st.info("💡 Fallback: Use the code export below")
         else:
             st.error("❌ Failed to generate valid mermaid diagram content")
             st.info("💡 This might be due to complex content structure. Try using the Tree View instead.")
         
-        # Also provide code and download options
-        with st.expander("🔧 View/Export Code"):
+        # Always provide code export option
+        with st.expander("🔧 View/Export Mermaid Code"):
             if mermaid_content:
                 st.code(mermaid_content, language="mermaid")
                 st.download_button(
@@ -265,13 +648,16 @@ def display_mind_map_results(mind_map_data):
                     "mindmap.mmd",
                     "text/plain"
                 )
-                st.info("💡 You can also copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for further customization!")
+                st.info("💡 Copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for testing and further customization!")
             else:
                 st.warning("No mermaid content available for export")
-            
 
 def display_mind_map_tree(mind_map_data):
-    """Display mind map as an interactive tree structure"""
+    """FIXED: Display mind map as an interactive tree structure with working buttons"""
+    
+    # CRITICAL: Add this line at the beginning to handle button callbacks
+    handle_pending_actions()
+    
     title = mind_map_data.get("title", "Mind Map")
     themes = mind_map_data.get("themes", [])
     
@@ -282,65 +668,63 @@ def display_mind_map_tree(mind_map_data):
         return
     
     for i, theme in enumerate(themes):
-        # Show more prominent theme header with metrics
-        with st.expander(f"🎯 **{theme['name']}**", expanded=i < 2):  # Auto-expand first 2 for better focus
-            # Enhanced theme display with structured information
-            st.markdown(f"**Overview:** {theme.get('summary', 'No summary available')}")
+        with st.expander(f"🎯 **{theme['name']}**", expanded=False):
+            st.write(f"*{theme.get('summary', 'No summary available')}*")
             
-            sub_themes = theme.get('sub_themes', [])
-            if sub_themes:
-                st.markdown(f"**Analysis Depth:** {len(sub_themes)} key areas identified")
-                st.markdown("---")
-                
-                for j, sub_theme in enumerate(sub_themes):
-                    # More detailed sub-theme display
-                    st.markdown(f"### 📌 {sub_theme['name']}")
-                    
-                    # Use columns for better layout
-                    col1, col2 = st.columns([3, 1])
-                    
-                    with col1:
-                        st.markdown(f"**Key Insights:** {sub_theme.get('summary', 'No summary available')}")
-                        
-                        # Show details if they exist
-                        details = sub_theme.get('sub_themes', [])
-                        if details:
-                            st.markdown("**Specific Details:**")
-                            for k, detail in enumerate(details):
-                                st.markdown(f"   {k+1}. **{detail['name']}**: {detail.get('summary', 'No details available')}")
-                        else:
-                            # If no details, try to generate some insights based on the summary
-                            if len(sub_theme.get('summary', '')) > 50:
-                                st.markdown("**Analysis Notes:**")
-                                st.markdown(f"   • This area contains significant information requiring deeper analysis")
-                                st.markdown(f"   • Consider exploring this topic through the chat interface for detailed insights")
-                    
-                    with col2:
-                        # Action buttons in a more organized way
-                        if st.button(f"💬 Explore", key=f"explore_{theme['id']}_{j}", help=f"Deep dive into '{sub_theme['name']}'"):
-                            explore_topic_in_chat(sub_theme)
-                        
-                        if st.button(f"📋 Details", key=f"detail_{theme['id']}_{j}", help=f"Generate detailed notes for '{sub_theme['name']}'"):
-                            generate_detailed_notes(sub_theme)
-                    
-                    if j < len(sub_themes) - 1:  # Add separator between sub-themes
-                        st.markdown("---")
-            else:
-                st.warning("Limited analysis depth available - this may indicate the theme needs more detailed exploration")
-                st.info("💡 **Tip:** Try using the 'Regenerate' button to get more detailed analysis, or explore this theme in chat.")
-            
-            # Enhanced main theme exploration
-            st.markdown("---")
+            # FIXED: Theme-level action buttons with proper callbacks
             col1, col2, col3 = st.columns(3)
             with col1:
-                if st.button(f"💬 Discuss Theme", key=f"discuss_{theme['id']}", help=f"Start a conversation about '{theme['name']}'"):
-                    explore_topic_in_chat(theme)
+                st.button(
+                    f"💬 Discuss Theme", 
+                    key=f"discuss_{theme['id']}_{i}",
+                    help=f"Start a conversation about '{theme['name']}'",
+                    on_click=discuss_theme_callback,
+                    args=(theme,)
+                )
             with col2:
-                if st.button(f"🔍 Deep Analysis", key=f"analyze_{theme['id']}", help=f"Generate comprehensive analysis of '{theme['name']}'"):
-                    generate_comprehensive_analysis(theme)
+                st.button(
+                    f"🔍 Deep Analysis", 
+                    key=f"analyze_{theme['id']}_{i}",
+                    help=f"Generate comprehensive analysis of '{theme['name']}'",
+                    on_click=comprehensive_analysis_callback,
+                    args=(theme,)
+                )
             with col3:
-                if st.button(f"📊 Data Points", key=f"data_{theme['id']}", help=f"Extract specific data and facts about '{theme['name']}'"):
-                    extract_data_points(theme)
+                st.button(
+                    f"📊 Data Points", 
+                    key=f"data_{theme['id']}_{i}",
+                    help=f"Extract specific data and facts about '{theme['name']}'",
+                    on_click=extract_data_points_callback,
+                    args=(theme,)
+                )
+            
+            # Display sub-themes
+            sub_themes = theme.get("sub_themes", [])
+            if sub_themes:
+                st.markdown("**Sub-topics:**")
+                for j, sub_theme in enumerate(sub_themes):
+                    with st.container():
+                        st.markdown(f"**{sub_theme['name']}**")
+                        st.write(f"_{sub_theme.get('summary', 'No summary available')}_")
+                        
+                        # FIXED: Sub-theme action buttons with unique keys and callbacks
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.button(
+                                f"💬 Explore", 
+                                key=f"explore_{theme['id']}_{j}_{i}",
+                                help=f"Deep dive into '{sub_theme['name']}'",
+                                on_click=explore_topic_callback,
+                                args=(sub_theme,)
+                            )
+                        with col2:
+                            st.button(
+                                f"📋 Details", 
+                                key=f"detail_{theme['id']}_{j}_{i}",
+                                help=f"Generate detailed notes for '{sub_theme['name']}'",
+                                on_click=generate_details_callback,
+                                args=(sub_theme,)
+                            )
 
 def explore_topic_in_chat(topic_data):
     """Add a topic exploration question to the chat"""
@@ -349,46 +733,18 @@ def explore_topic_in_chat(topic_data):
         topic_summary = topic_data.get('summary', '')
         
         # Create a focused question
-        question = f"Tell me more about '{topic_name}'. {topic_summary} What are the key insights and details about this topic from the documents?"
+        question = f"Tell me more about '{topic_name}'. {topic_summary} What are the key insights and details I should know?"
         
         # Add to chat history
-        st.session_state.chat_history.append({
-            "role": "user",
-            "content": f"[Mind Map Topic] {topic_name}"
-        })
+        if "chat_messages" not in st.session_state:
+            st.session_state.chat_messages = []
         
-        with st.spinner(f"Exploring '{topic_name}'..."):
-            # Get relevant context from documents
-            context = st.session_state.vector_store.get_context_for_query(question)
-            
-            # Get AI response
-            response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=2000,
-                temperature=0.7
-            )
-            
-            if response["success"]:
-                # Add AI response to chat
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                # Save chat history persistently
-                save_chat_history()
-                st.success(f"✅ Added detailed discussion about '{topic_name}' to the chat! **Scroll up to see the conversation.**")
-                # Force page refresh to show new content
-                st.rerun()
-            else:
-                st.error(f"Failed to explore topic: {response['error']}")
+        st.session_state.chat_messages.append({"role": "user", "message": question})
+        
+        st.success(f"✅ Added exploration question about '{topic_name}' to chat!")
+        
     except Exception as e:
-        st.error(f"Error in explore_topic_in_chat: {str(e)}")
+        st.error(f"Error in topic exploration: {str(e)}")
 
 def generate_detailed_notes(topic_data):
     """Generate detailed notes for a specific topic"""
@@ -396,40 +752,30 @@ def generate_detailed_notes(topic_data):
         topic_name = topic_data['name']
         topic_summary = topic_data.get('summary', '')
         
-        question = f"Generate comprehensive, detailed notes about '{topic_name}'. Include specific facts, data, methodologies, and actionable insights. Break down the information into organized sections with bullet points and structured details."
+        question = f"Generate comprehensive, detailed notes about '{topic_name}'. Include specific facts, data, methodologies, and analysis. Context: {topic_summary}"
         
-        with st.spinner(f"Generating detailed notes for '{topic_name}'..."):
-            context = st.session_state.vector_store.get_context_for_query(question)
+        # Process with AI
+        all_text = []
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text.append(doc_info["text"])
+        
+        if all_text:
+            combined_text = "\n\n".join(all_text)
             response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=2500,
-                temperature=0.5
+                question, combined_text[:8000]
             )
             
             if response["success"]:
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": f"[Detailed Notes] {topic_name}"
-                })
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                save_chat_history()
-                st.success(f"✅ Generated detailed notes for '{topic_name}' - **scroll up to see the new content in the chat!**")
-                # Force page refresh to show new content
-                st.rerun()
+                st.success(f"📋 Detailed Notes: {topic_name}")
+                st.write(response["content"])
             else:
                 st.error(f"Failed to generate notes: {response['error']}")
+        else:
+            st.warning("No documents available for analysis")
+            
     except Exception as e:
-        st.error(f"Error in generate_detailed_notes: {str(e)}")
+        st.error(f"Error generating detailed notes: {str(e)}")
 
 def generate_comprehensive_analysis(theme_data):
     """Generate comprehensive analysis for a theme"""
@@ -437,40 +783,30 @@ def generate_comprehensive_analysis(theme_data):
         theme_name = theme_data['name']
         theme_summary = theme_data.get('summary', '')
         
-        question = f"Provide a comprehensive analysis of '{theme_name}'. Include: 1) Overview and context, 2) Key findings and insights, 3) Supporting evidence and data, 4) Implications and significance, 5) Related concepts and connections. Be thorough and analytical."
+        question = f"Provide a comprehensive analysis of '{theme_name}'. Include: 1) Overview and context, 2) Key findings and insights, 3) Supporting evidence, 4) Implications and significance, 5) Related concepts. Context: {theme_summary}"
         
-        with st.spinner(f"Generating comprehensive analysis for '{theme_name}'..."):
-            context = st.session_state.vector_store.get_context_for_query(question)
+        # Process with AI
+        all_text = []
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text.append(doc_info["text"])
+        
+        if all_text:
+            combined_text = "\n\n".join(all_text)
             response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=3000,
-                temperature=0.4
+                question, combined_text[:8000]
             )
             
             if response["success"]:
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": f"[Comprehensive Analysis] {theme_name}"
-                })
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                save_chat_history()
-                st.success(f"✅ Generated comprehensive analysis for '{theme_name}' - **scroll up to see the new content in the chat!**")
-                # Force page refresh to show new content
-                st.rerun()
+                st.success(f"🔍 Comprehensive Analysis: {theme_name}")
+                st.write(response["content"])
             else:
                 st.error(f"Failed to generate analysis: {response['error']}")
+        else:
+            st.warning("No documents available for analysis")
+            
     except Exception as e:
-        st.error(f"Error in generate_comprehensive_analysis: {str(e)}")
+        st.error(f"Error in comprehensive analysis: {str(e)}")
 
 def extract_data_points(theme_data):
     """Extract specific data points and facts for a theme"""
@@ -478,1216 +814,536 @@ def extract_data_points(theme_data):
         theme_name = theme_data['name']
         theme_summary = theme_data.get('summary', '')
         
-        question = f"Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'. Present as organized lists with clear categories. Include quantitative data, qualitative findings, and cited sources where available."
+        question = f"Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'. Present as organized bullet points. Context: {theme_summary}"
         
-        with st.spinner(f"Extracting data points for '{theme_name}'..."):
-            context = st.session_state.vector_store.get_context_for_query(question)
+        # Process with AI
+        all_text = []
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text.append(doc_info["text"])
+        
+        if all_text:
+            combined_text = "\n\n".join(all_text)
             response = st.session_state.ai_client.chat_with_document(
-                user_question=question,
-                document_context=context,
-                max_tokens=2000,
-                temperature=0.2  # Lower temperature for factual extraction
+                question, combined_text[:8000]
             )
             
             if response["success"]:
-                personality_name = st.session_state.ai_client.personalities[
-                    st.session_state.ai_client.current_personality
-                ]["name"]
-                
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": f"[Data Points] {theme_name}"
-                })
-                
-                st.session_state.chat_history.append({
-                    "role": "assistant",
-                    "content": response["content"],
-                    "personality": personality_name
-                })
-                save_chat_history()
-                st.success(f"✅ Extracted data points for '{theme_name}' - **scroll up to see the new content in the chat!**")
-                # Force page refresh to show new content
-                st.rerun()
+                st.success(f"📊 Data Points: {theme_name}")
+                st.write(response["content"])
             else:
                 st.error(f"Failed to extract data points: {response['error']}")
+        else:
+            st.warning("No documents available for analysis")
+            
     except Exception as e:
-        st.error(f"Error in extract_data_points: {str(e)}")
-
-def add_debug_info(message):
-    """Add debug information to global debug log"""
-    pass  # Simplified - debug info not needed with new implementation
-
-def main():
-    # Hide heading links with enhanced CSS
-    st.html("""
-    <style>
-    /* Completely hide anchor links in headings */
-    .stMarkdown h1 a,
-    .stMarkdown h2 a,
-    .stMarkdown h3 a,
-    .stMarkdown h4 a,
-    .stMarkdown h5 a,
-    .stMarkdown h6 a {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-    }
-
-    /* Remove all link styling and behavior from headings */
-    .stMarkdown h1,
-    .stMarkdown h2,
-    .stMarkdown h3,
-    .stMarkdown h4,
-    .stMarkdown h5,
-    .stMarkdown h6 {
-        text-decoration: none !important;
-        color: inherit !important;
-        cursor: default !important;
-        pointer-events: auto !important;
-    }
-
-    /* Hide all types of anchor elements */
-    .stMarkdown .anchor-link,
-    .stMarkdown .anchor-link-text {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* Target specific Streamlit header containers */
-    div[data-testid="stMarkdownContainer"] h1 a,
-    div[data-testid="stMarkdownContainer"] h2 a,
-    div[data-testid="stMarkdownContainer"] h3 a {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    /* Override any header link behavior */
-    .element-container h1,
-    .element-container h2,
-    .element-container h3 {
-        position: relative;
-    }
-    
-    .element-container h1:hover,
-    .element-container h2:hover,
-    .element-container h3:hover {
-        cursor: default !important;
-    }
-    </style>
-    """)
-
-    # Header
-    st.markdown("<h1 style='margin-bottom: 1rem; color: inherit; text-decoration: none;'>🤖 AI Document Analyzer & Chat</h1>", unsafe_allow_html=True)
-    st.markdown("""
-    Upload documents (PDF, Word, Text) and chat with them using AI. Get insights, summaries, 
-    and answers from your documents with different AI expert personalities.
-    """)
-    
-    # Check API key status and show warning if needed
-    service_info = st.session_state.ai_client.get_service_info()
-    if "❌" in service_info.get("api_key_status", ""):
-        st.error("""
-        🔑 **OpenRouter API Key Required** - Please add your API key to `.streamlit/secrets.toml`:
-        
-        ```toml
-        [openrouter]
-        api_key = "your-key-here"
-        ```
-        
-        Get your free API key at: https://openrouter.ai/keys
-        """)
-        st.divider()
-    
-    # Sidebar for document management and settings
-    with st.sidebar:
-        st.header("📁 Document Management")
-        
-        # File uploader
-        uploaded_file = st.file_uploader(
-            "Upload Document",
-            type=['pdf', 'docx', 'doc', 'txt'],
-            help="Upload PDF, Word, or text files to analyze"
-        )
-        
-        if uploaded_file is not None:
-            process_uploaded_file(uploaded_file)
-        
-        # Show uploaded documents
-        if st.session_state.documents:
-            st.subheader("📄 Uploaded Documents")
-            for filename, doc_info in st.session_state.documents.items():
-                with st.expander(f"{filename}"):
-                    if doc_info["success"]:
-                        st.success("✅ Processed")
-                        st.write(f"**Type:** {doc_info['file_type']}")
-                        st.write(f"**Words:** {doc_info['word_count']:,}")
-                        st.write(f"**Chunks:** {doc_info['chunk_count']}")
-                        
-                        if st.button(f"Remove {filename}", key=f"remove_{filename}"):
-                            remove_document(filename)
-                            st.rerun()
-                    else:
-                        st.error(f"❌ Error: {doc_info['error']}")
-        else:
-            st.info("No documents uploaded yet")
-        
-        # AI Settings
-        st.header("🎭 AI Settings")
-        
-        # Personality selection
-        personalities = st.session_state.ai_client.get_available_personalities()
-        personality_options = {key: data["name"] for key, data in personalities.items()}
-        
-        selected_personality = st.selectbox(
-            "AI Personality",
-            options=list(personality_options.keys()),
-            format_func=lambda x: personality_options[x],
-            help="Choose the AI expert type for analysis"
-        )
-        
-        if selected_personality != st.session_state.ai_client.current_personality:
-            st.session_state.ai_client.set_personality(selected_personality)
-            st.success(f"Switched to {personality_options[selected_personality]}")
-        
-        # Show current personality description
-        current_desc = personalities[selected_personality]["description"]
-        st.caption(f"💡 {current_desc}")
-        
-        # Model selection dropdown
-        service_info = st.session_state.ai_client.get_service_info()
-        if service_info["available_models"]:
-            available_models = service_info["available_models"]
-            model_names = {
-                "gpt-oss-120b": "GPT-OSS 120B (Recommended)",
-                "deepseek-v3.1": "DeepSeek Chat v3.1",
-                "gemini-2.5-flash": "Gemini 2.5 Flash",
-                "gpt-oss-20b": "GPT-OSS 20B",
-                "qwen-2.5-7b": "Qwen 2.5 7B",
-                "llama-3.2-3b": "Llama 3.2 3B",
-                "llama-3.2-1b": "Llama 3.2 1B"
-            }
-            
-            selected_model = st.selectbox(
-                "Select AI Model",
-                options=available_models,
-                format_func=lambda x: model_names.get(x, x),
-                help="Choose which free AI model to use"
-            )
-            
-            # Update model if changed
-            current_model_key = None
-            for key, model_id in st.session_state.ai_client.available_models.items():
-                if model_id == st.session_state.ai_client.current_model:
-                    current_model_key = key
-                    break
-            
-            if selected_model != current_model_key:
-                if st.session_state.ai_client.set_model(selected_model):
-                    st.success(f"Switched to {model_names.get(selected_model, selected_model)}")
-        
-        # Show AI service info
-        st.caption(f"**Provider:** {service_info['provider']}")
-        st.caption(f"**Status:** {service_info['api_key_status']}")
-        
-        # Clear chat history
-        if st.button("🗑️ Clear Chat History"):
-            clear_persistent_chat()
-            st.success("Chat history cleared!")
-    
-    # Main content area
-    col1, col2 = st.columns([2, 1])
-    
-    
-    with col1:
-        # Chat interface
-        st.markdown("<h3 style='margin-bottom: 1rem; color: inherit; text-decoration: none;'>💬 Chat with Your Documents</h3>", unsafe_allow_html=True)
-        
-        # Display chat history
-        chat_container = st.container()
-        
-        with chat_container:
-            if st.session_state.chat_history:
-                for i, message in enumerate(st.session_state.chat_history):
-                    if message["role"] == "user":
-                        with st.chat_message("user"):
-                            st.write(message["content"])
-                    else:
-                        with st.chat_message("assistant"):
-                            st.write(message["content"])
-                            if "personality" in message:
-                                st.caption(f"*Response from {message['personality']}*")
-            else:
-                st.info("👋 Start by uploading a document and asking a question!")
-        
-        # Chat input
-        if st.session_state.documents:
-            user_question = st.chat_input("Ask a question about your documents...")
-            
-            if user_question:
-                handle_user_question(user_question)
-        else:
-            st.warning("⚠️ Please upload a document first to start chatting.")
-    
-    with col2:
-        # Document insights and quick actions
-        st.markdown("<h3 style='margin-bottom: 1rem; color: inherit; text-decoration: none;'>📊 Document Insights</h3>", unsafe_allow_html=True)
-        
-        if st.session_state.documents:
-            # Quick statistics
-            total_words = sum(doc["word_count"] for doc in st.session_state.documents.values() if doc["success"])
-            total_docs = len([doc for doc in st.session_state.documents.values() if doc["success"]])
-            
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.metric("Documents", total_docs)
-            with col_b:
-                st.metric("Total Words", f"{total_words:,}")
-            
-            # Quick analysis buttons
-            st.subheader("🔍 Quick Analysis")
-            
-            if st.button("📝 Generate Summary", use_container_width=True):
-                generate_document_summary()
-            
-            if st.button("🎯 Extract Key Points", use_container_width=True):
-                extract_key_points()
-            
-            if st.button("📈 Analyze Sentiment", use_container_width=True):
-                analyze_sentiment()
-            
-            if st.button("🧠 Generate Mind Map", use_container_width=True):
-                generate_mind_map()
-            
-            # Vector store statistics
-            stats = st.session_state.vector_store.get_statistics()
-            if stats["is_ready"]:
-                st.subheader("🔍 Search Stats")
-                st.write(f"**Total Chunks:** {stats['total_chunks']}")
-                st.write(f"**Vocabulary Size:** {stats['vocabulary_size']:,}")
-        else:
-            st.info("Upload documents to see insights")
-
-def process_uploaded_file(uploaded_file):
-    """Process uploaded file and add to document store"""
-    filename = uploaded_file.name
-    
-    if filename in st.session_state.documents:
-        st.warning(f"Document '{filename}' already uploaded!")
-        return
-    
-    with st.spinner(f"Processing {filename}..."):
-        # Process document
-        doc_info = st.session_state.processor.process_document(uploaded_file, filename)
-        
-        # Add to session state
-        st.session_state.documents[filename] = doc_info
-        
-        if doc_info["success"]:
-            # Add to vector store
-            success = st.session_state.vector_store.add_document(doc_info)
-            if success:
-                st.success(f"✅ Successfully processed '{filename}'!")
-                st.session_state.current_document = filename
-            else:
-                st.error(f"❌ Failed to index '{filename}' for search")
-        else:
-            st.error(f"❌ Failed to process '{filename}': {doc_info['error']}")
+        st.error(f"Error extracting data points: {str(e)}")
 
 def remove_document(filename):
-    """Remove document from all stores"""
-    if filename in st.session_state.documents:
-        # Remove from vector store
-        st.session_state.vector_store.remove_document(filename)
-        
-        # Remove from session state
-        del st.session_state.documents[filename]
-        
-        # Clear current document if it was removed
-        if st.session_state.current_document == filename:
-            st.session_state.current_document = None
-        
-        st.success(f"Removed '{filename}'")
+    """Remove a document from the collection"""
+    try:
+        if filename in st.session_state.documents:
+            del st.session_state.documents[filename]
+            # Clear vector store for the removed document
+            st.session_state.vector_store.clear()
+            # Rebuild vector store with remaining documents
+            for fname, doc_info in st.session_state.documents.items():
+                if doc_info["success"]:
+                    st.session_state.vector_store.add_document(fname, doc_info["text"])
+            st.success(f"Removed {filename}")
+        else:
+            st.error(f"Document {filename} not found")
+    except Exception as e:
+        st.error(f"Error removing document: {str(e)}")
 
-def handle_user_question(question):
-    """Handle user question and generate AI response"""
-    # Add user message to chat
-    st.session_state.chat_history.append({
-        "role": "user",
-        "content": question
-    })
+def upload_document():
+    """Handle document upload"""
+    uploaded_file = st.file_uploader(
+        "Upload a document",
+        type=['pdf', 'docx', 'doc', 'txt'],
+        help="Supported formats: PDF, Word documents (.docx, .doc), Plain text (.txt)"
+    )
     
-    with st.spinner("Thinking..."):
-        # Get relevant context from documents
-        context = st.session_state.vector_store.get_context_for_query(question)
+    if uploaded_file is not None:
+        if uploaded_file.name not in st.session_state.documents:
+            with st.spinner(f"Processing {uploaded_file.name}..."):
+                # Process the document
+                doc_result = st.session_state.processor.process_document(
+                    uploaded_file, uploaded_file.name
+                )
+                
+                # Store in session state
+                st.session_state.documents[uploaded_file.name] = doc_result
+                
+                # Add to vector store if successful
+                if doc_result["success"]:
+                    st.session_state.vector_store.add_document(
+                        uploaded_file.name, doc_result["text"]
+                    )
+                    st.success(f"✅ Successfully processed {uploaded_file.name}")
+                    st.info(f"📄 {doc_result['word_count']} words, {doc_result['chunk_count']} chunks")
+                else:
+                    st.error(f"❌ Failed to process {uploaded_file.name}: {doc_result['error']}")
+        else:
+            st.warning(f"Document {uploaded_file.name} already uploaded")
+
+def display_documents():
+    """Display uploaded documents"""
+    if st.session_state.documents:
+        st.write("**Uploaded Documents:**")
+        for filename, doc_info in st.session_state.documents.items():
+            with st.expander(f"📄 {filename}"):
+                if doc_info["success"]:
+                    st.write(st.session_state.processor.get_document_summary(doc_info))
+                    if st.button(f"Remove {filename}", key=f"remove_{filename}"):
+                        remove_document(filename)
+                else:
+                    st.error(f"Error: {doc_info['error']}")
+                    if st.button(f"Remove {filename}", key=f"remove_{filename}"):
+                        remove_document(filename)
+    else:
+        st.info("No documents uploaded yet")
+
+def generate_fresh_summary():
+    """Generate fresh document summary"""
+    try:
+        with st.status("🤖 Generating document summary...", expanded=True) as status:
+            all_text = []
+            document_titles = []
+            
+            for filename, doc_info in st.session_state.documents.items():
+                if doc_info["success"]:
+                    all_text.append(doc_info["text"])
+                    document_titles.append(filename)
+            
+            if not all_text:
+                st.warning("No valid documents to analyze")
+                return
+            
+            combined_text = "\n\n=== DOCUMENT SEPARATOR ===\n\n".join(all_text)
+            st.write(f"📊 Analyzing {len(document_titles)} document(s)...")
+            
+            # Generate summary using AI
+            response = st.session_state.ai_client.analyze_document(
+                combined_text[:15000],  # Increased limit for better analysis
+                "summary"
+            )
+            
+            if response["success"]:
+                content = response["content"]
+                status.update(label="✅ Summary generated!", state="complete")
+                
+                # Cache the result
+                save_analysis_cache("summary", content)
+                
+                # Display with regenerate option
+                col1, col2 = st.columns([3, 1])
+                with col2:
+                    st.button("🔄 Regenerate", key="regen_summary_new", on_click=regenerate_summary)
+                
+                st.write(content)
+            else:
+                st.error(f"Error generating summary: {response['error']}")
+                
+    except Exception as e:
+        st.error(f"Error in summary generation: {str(e)}")
+
+def generate_fresh_key_points():
+    """Generate fresh key points analysis"""
+    try:
+        with st.status("🎯 Extracting key points...", expanded=True) as status:
+            all_text = []
+            
+            for filename, doc_info in st.session_state.documents.items():
+                if doc_info["success"]:
+                    all_text.append(doc_info["text"])
+            
+            if not all_text:
+                st.warning("No valid documents to analyze")
+                return
+            
+            combined_text = "\n\n".join(all_text)
+            st.write("🔍 Identifying key insights and conclusions...")
+            
+            response = st.session_state.ai_client.analyze_document(
+                combined_text[:15000],
+                "key_points"
+            )
+            
+            if response["success"]:
+                content = response["content"]
+                status.update(label="✅ Key points extracted!", state="complete")
+                
+                save_analysis_cache("key_points", content)
+                
+                col1, col2 = st.columns([3, 1])
+                with col2:
+                    st.button("🔄 Regenerate", key="regen_key_points_new", on_click=regenerate_key_points)
+                
+                st.write(content)
+            else:
+                st.error(f"Error extracting key points: {response['error']}")
+                
+    except Exception as e:
+        st.error(f"Error in key points extraction: {str(e)}")
+
+def generate_fresh_sentiment():
+    """Generate fresh sentiment analysis"""
+    try:
+        with st.status("📈 Analyzing sentiment and tone...", expanded=True) as status:
+            all_text = []
+            
+            for filename, doc_info in st.session_state.documents.items():
+                if doc_info["success"]:
+                    all_text.append(doc_info["text"])
+            
+            if not all_text:
+                st.warning("No valid documents to analyze")
+                return
+            
+            combined_text = "\n\n".join(all_text)
+            st.write("🎭 Examining emotional tone and attitudes...")
+            
+            response = st.session_state.ai_client.analyze_document(
+                combined_text[:15000],
+                "sentiment"
+            )
+            
+            if response["success"]:
+                content = response["content"]
+                status.update(label="✅ Sentiment analysis complete!", state="complete")
+                
+                save_analysis_cache("sentiment", content)
+                
+                col1, col2 = st.columns([3, 1])
+                with col2:
+                    st.button("🔄 Regenerate", key="regen_sentiment_new", on_click=regenerate_sentiment)
+                
+                st.write(content)
+            else:
+                st.error(f"Error analyzing sentiment: {response['error']}")
+                
+    except Exception as e:
+        st.error(f"Error in sentiment analysis: {str(e)}")
+
+def generate_fresh_mind_map():
+    """Generate fresh mind map"""
+    try:
+        all_text = []
+        document_titles = []
         
-        # Get AI response
-        response = st.session_state.ai_client.chat_with_document(
-            user_question=question,
-            document_context=context,
-            max_tokens=2500,
-            temperature=0.7
+        for filename, doc_info in st.session_state.documents.items():
+            if doc_info["success"]:
+                all_text.append(doc_info["text"])
+                document_titles.append(filename)
+        
+        if not all_text:
+            st.warning("No valid documents to analyze")
+            return
+        
+        combined_text = "\n\n".join(all_text)
+        
+        # Generate mind map
+        mind_map_data = st.session_state.mindmap_generator.generate_mind_map(
+            combined_text, document_titles
         )
         
-        if response["success"]:
-            # Add AI response to chat
-            personality_name = st.session_state.ai_client.personalities[
-                st.session_state.ai_client.current_personality
-            ]["name"]
+        if mind_map_data and "error" not in mind_map_data:
+            # Cache the result
+            save_analysis_cache("mind_map", mind_map_data)
             
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": response["content"],
-                "personality": personality_name
-            })
+            # Display with regenerate option
+            col1, col2 = st.columns([3, 1])
+            with col2:
+                st.button("🔄 Regenerate", key="regen_mindmap_new", on_click=regenerate_mindmap)
+            
+            display_mind_map_results(mind_map_data)
         else:
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": f"Sorry, I encountered an error: {response['error']}",
-                "personality": "System"
-            })
-    
-    # Save chat history persistently
-    save_chat_history()
-    st.rerun()
+            st.error(f"Failed to generate mind map: {mind_map_data.get('error', 'Unknown error')}")
+            
+    except Exception as e:
+        st.error(f"Error in mind map generation: {str(e)}")
 
+# FIXED: Main analysis functions with proper regenerate handling
 def generate_document_summary():
-    """Generate summary of all uploaded documents"""
+    """Generate document summary with proper regenerate handling"""
     if not st.session_state.documents:
-        st.warning("No documents to summarize")
+        st.warning("No documents to analyze")
         return
     
-    # Check cache first
+    # Check for forced regeneration
+    if st.session_state.get("force_regenerate_summary", False):
+        st.session_state.force_regenerate_summary = False
+        generate_fresh_summary()
+        return
+    
+    # Check cache
     cached_result = get_cached_analysis("summary")
     if cached_result:
-        st.subheader("📝 Document Summary")
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.caption("✅ Cached result from previous analysis")
+            st.info("📄 Using cached analysis")
         with col2:
-            if st.button("🔄 Regenerate", key="regen_summary"):
-                # Clear cache and regenerate immediately
-                documents_hash = get_documents_hash()
-                personality = st.session_state.ai_client.current_personality
-                cache_key = get_cache_key(documents_hash, "summary", personality)
-                if cache_key in st.session_state.cached_analyses:
-                    del st.session_state.cached_analyses[cache_key]
-                generate_fresh_summary()
-                return
+            st.button("🔄 Regenerate", key="regen_summary", on_click=regenerate_summary)
         
         st.write(cached_result["content"])
         return
     
     generate_fresh_summary()
 
-def generate_fresh_summary():
-    """Generate fresh summary analysis"""
-    with st.spinner("Generating summary..."):
-        # Combine text from all successful documents
-        all_text = ""
-        for filename, doc_info in st.session_state.documents.items():
-            if doc_info["success"]:
-                all_text += f"\n\n--- {filename} ---\n{doc_info['text'][:2000]}"  # Limit text
-        
-        if all_text:
-            response = st.session_state.ai_client.analyze_document(all_text, "summary")
-            
-            if response["success"]:
-                # Save to cache
-                save_analysis_cache("summary", response["content"])
-                
-                st.subheader("📝 Document Summary")
-                st.caption("🆕 Freshly generated analysis")
-                st.write(response["content"])
-                st.success("✅ Summary regenerated successfully!")
-            else:
-                st.error(f"Failed to generate summary: {response['error']}")
-
 def extract_key_points():
-    """Extract key points from documents"""
+    """Extract key points with proper regenerate handling"""
     if not st.session_state.documents:
         st.warning("No documents to analyze")
         return
     
-    # Check cache first
+    # Check for forced regeneration
+    if st.session_state.get("force_regenerate_key_points", False):
+        st.session_state.force_regenerate_key_points = False
+        generate_fresh_key_points()
+        return
+    
+    # Check cache
     cached_result = get_cached_analysis("key_points")
     if cached_result:
-        st.subheader("🎯 Key Points")
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.caption("✅ Cached result from previous analysis")
+            st.info("🎯 Using cached analysis")
         with col2:
-            if st.button("🔄 Regenerate", key="regen_key_points"):
-                # Clear cache and regenerate immediately
-                documents_hash = get_documents_hash()
-                personality = st.session_state.ai_client.current_personality
-                cache_key = get_cache_key(documents_hash, "key_points", personality)
-                if cache_key in st.session_state.cached_analyses:
-                    del st.session_state.cached_analyses[cache_key]
-                generate_fresh_key_points()
-                return
+            st.button("🔄 Regenerate", key="regen_key_points", on_click=regenerate_key_points)
         
         st.write(cached_result["content"])
         return
     
     generate_fresh_key_points()
 
-def generate_fresh_key_points():
-    """Generate fresh key points analysis"""
-    with st.spinner("Extracting key points..."):
-        # Get combined text
-        all_text = ""
-        for filename, doc_info in st.session_state.documents.items():
-            if doc_info["success"]:
-                all_text += f"\n\n--- {filename} ---\n{doc_info['text'][:2000]}"
-        
-        if all_text:
-            response = st.session_state.ai_client.analyze_document(all_text, "key_points")
-            
-            if response["success"]:
-                # Save to cache
-                save_analysis_cache("key_points", response["content"])
-                
-                st.subheader("🎯 Key Points")
-                st.caption("🆕 Freshly generated analysis")
-                st.write(response["content"])
-                st.success("✅ Key points regenerated successfully!")
-            else:
-                st.error(f"Failed to extract key points: {response['error']}")
-
 def analyze_sentiment():
-    """Analyze sentiment of documents"""
+    """Analyze sentiment with proper regenerate handling"""
     if not st.session_state.documents:
         st.warning("No documents to analyze")
         return
     
-    # Check cache first
+    # Check for forced regeneration
+    if st.session_state.get("force_regenerate_sentiment", False):
+        st.session_state.force_regenerate_sentiment = False
+        generate_fresh_sentiment()
+        return
+    
+    # Check cache
     cached_result = get_cached_analysis("sentiment")
     if cached_result:
-        st.subheader("📈 Sentiment Analysis")
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.caption("✅ Cached result from previous analysis")
+            st.info("📈 Using cached analysis")
         with col2:
-            if st.button("🔄 Regenerate", key="regen_sentiment"):
-                # Clear cache and regenerate immediately
-                documents_hash = get_documents_hash()
-                personality = st.session_state.ai_client.current_personality
-                cache_key = get_cache_key(documents_hash, "sentiment", personality)
-                if cache_key in st.session_state.cached_analyses:
-                    del st.session_state.cached_analyses[cache_key]
-                generate_fresh_sentiment()
-                return
+            st.button("🔄 Regenerate", key="regen_sentiment", on_click=regenerate_sentiment)
         
         st.write(cached_result["content"])
         return
     
     generate_fresh_sentiment()
 
-def generate_fresh_sentiment():
-    """Generate fresh sentiment analysis"""
-    with st.spinner("Analyzing sentiment..."):
-        # Get combined text
-        all_text = ""
-        for filename, doc_info in st.session_state.documents.items():
-            if doc_info["success"]:
-                all_text += f"\n\n--- {filename} ---\n{doc_info['text'][:2000]}"
-        
-        if all_text:
-            response = st.session_state.ai_client.analyze_document(all_text, "sentiment")
-            
-            if response["success"]:
-                # Save to cache
-                save_analysis_cache("sentiment", response["content"])
-                
-                st.subheader("📈 Sentiment Analysis")
-                st.caption("🆕 Freshly generated analysis")
-                st.write(response["content"])
-                st.success("✅ Sentiment analysis regenerated successfully!")
-            else:
-                st.error(f"Failed to analyze sentiment: {response['error']}")
-
-
-
-
-def create_themes_from_text_with_debug(text_response):
-    """Extract themes from text response when JSON parsing fails - with debugging"""
-    
-    try:
-        # Add to global debug info  
-        add_debug_info("**Text Extraction:** Starting text-based theme extraction")
-        add_debug_info("Method: Extracting themes from text patterns")
-        
-        # Simple extraction based on common patterns
-        lines = text_response.strip().split('\n')
-        
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            st.write(f"Found {len(lines)} lines to analyze")
-        
-        themes = []
-        current_theme = None
-        theme_id = 0
-        processed_lines = 0
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            processed_lines += 1
-                
-            # Look for theme indicators (bold text, numbered items, bullet points)
-            if any(indicator in line.lower() for indicator in ['theme', 'topic', 'section', 'main', 'key']):
-                if current_theme:
-                    themes.append(current_theme)
-                
-                theme_id += 1
-                current_theme = {
-                    'id': f'theme_{theme_id}',
-                    'name': line.replace('*', '').replace('#', '').strip()[:50],
-                    'summary': f'Key theme extracted from document analysis',
-                    'sub_themes': []
-                }
-            elif line.startswith(('-', '*', '•', '◦')) or line[0].isdigit():
-                # This looks like a sub-point
-                if current_theme:
-                    sub_theme = {
-                        'id': f'sub_theme_{theme_id}_{len(current_theme["sub_themes"])}',
-                        'name': line.lstrip('- *•◦0123456789. ').strip()[:50],
-                        'summary': 'Sub-theme from document analysis',
-                        'sub_themes': []
-                    }
-                    current_theme['sub_themes'].append(sub_theme)
-        
-        # Add the last theme
-        if current_theme:
-            themes.append(current_theme)
-        
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            st.write(f"Processed {processed_lines} meaningful lines")
-            st.write(f"Found {len(themes)} main themes from text analysis")
-        
-        # If no structured themes found, create some basic ones
-        if not themes:
-            with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-                st.warning("No structured themes found, extracting from sentences")
-                
-            # Try multiple extraction strategies
-            
-            # Strategy 1: Extract sentences as themes
-            sentences = [s.strip() for s in text_response.split('.') if s.strip() and len(s.strip()) > 10]
-            
-            # Strategy 2: Extract lines that look like headings or important points
-            lines = [line.strip() for line in text_response.split('\n') if line.strip() and len(line.strip()) > 5]
-            meaningful_lines = []
-            for line in lines:
-                # Look for lines that seem important (capitalized, numbered, have keywords)
-                if (line[0].isupper() or 
-                    any(word in line.lower() for word in ['analysis', 'finding', 'conclusion', 'result', 'key', 'main', 'important']) or
-                    line.startswith(tuple('123456789')) or
-                    line.startswith('-') or line.startswith('*')):
-                    meaningful_lines.append(line)
-            
-            # Use meaningful lines first, then sentences
-            content_sources = meaningful_lines if meaningful_lines else sentences[:5]
-            
-            with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-                st.write(f"Found {len(meaningful_lines)} meaningful lines, {len(sentences)} sentences")
-                st.write(f"Using {len(content_sources)} content sources for themes")
-                
-            for i, content in enumerate(content_sources[:7]):  # Max 7 themes
-                if content and len(content.strip()) > 3:
-                    clean_content = content.replace('*', '').replace('#', '').replace('-', '').strip()
-                    themes.append({
-                        'id': f'auto_theme_{i+1}',
-                        'name': clean_content[:60] + ("..." if len(clean_content) > 60 else ""),
-                        'summary': 'Theme extracted from document content',
-                        'sub_themes': []
-                    })
-        
-        result = {
-            'title': 'Document Analysis (Text Fallback)',
-            'themes': themes
-        }
-        
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            if themes:
-                st.success(f"✅ Successfully extracted {len(themes)} themes from text")
-            else:
-                st.error("❌ Failed to extract any themes")
-            
-        return result
-        
-    except Exception as e:
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=True):
-            st.error(f"❌ Text extraction failed: {str(e)}")
-            st.write("Creating emergency fallback theme")
-        return {
-            'title': 'Document Analysis',
-            'themes': [{
-                'id': 'fallback_theme',
-                'name': 'Document Content',
-                'summary': 'Content analysis available - click to explore in chat',
-                'sub_themes': []
-            }]
-        }
-
-def parse_mind_map_data(mind_map_data):
-    """Parse AI response into structured mind map data with optional debugging"""
-    
-    try:
-        # Add to global debug info
-        add_debug_info("**JSON Parsing Step 1:** Analyzing AI Response")
-        add_debug_info(f"Response type: {type(mind_map_data)}")
-        add_debug_info(f"Response length: {len(str(mind_map_data))} characters")
-        preview = str(mind_map_data)[:200] + ("..." if len(str(mind_map_data)) > 200 else "")
-        add_debug_info(f"Response preview: {preview}")
-        
-        if isinstance(mind_map_data, str):
-            import re
-            # Try to find JSON in the response
-            json_match = re.search(r'\{.*\}', mind_map_data, re.DOTALL)
-            if json_match:
-                with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                    st.success("✅ Found potential JSON structure")
-                
-                try:
-                    json_text = json_match.group()
-                    
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        st.write("**Step 3:** Original JSON found:")
-                        st.code(json_text[:300] + ("..." if len(json_text) > 300 else ""), language="json")
-                        st.write("**Step 4:** Applying JSON fixes")
-                    
-                    # Fix common JSON issues
-                    original_json = json_text
-                    
-                    # Fix single quotes to double quotes
-                    json_text = re.sub(r"'([^']*)':", r'"\1":', json_text)  # Fix property names
-                    json_text = re.sub(r":\s*'([^']*)'", r': "\1"', json_text)  # Fix string values
-                    
-                    # Remove any markdown code blocks
-                    json_text = re.sub(r'```json\s*', '', json_text)
-                    json_text = re.sub(r'```\s*$', '', json_text)
-                    
-                    # Fix trailing commas
-                    json_text = re.sub(r',\s*}', '}', json_text)  # Remove trailing commas before }
-                    json_text = re.sub(r',\s*]', ']', json_text)  # Remove trailing commas before ]
-                    
-                    # Fix missing quotes around property names
-                    json_text = re.sub(r'(\w+):', r'"\1":', json_text)
-                    
-                    # Fix incomplete JSON structures
-                    open_braces = json_text.count('{')
-                    close_braces = json_text.count('}')
-                    if open_braces > close_braces:
-                        json_text += '}' * (open_braces - close_braces)
-                    
-                    open_brackets = json_text.count('[')
-                    close_brackets = json_text.count(']')
-                    if open_brackets > close_brackets:
-                        json_text += ']' * (open_brackets - close_brackets)
-                    
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        if original_json != json_text:
-                            st.info("🔧 Applied quote fixes (single → double quotes)")
-                            st.write("Fixed JSON preview:")
-                            st.code(json_text[:300] + ("..." if len(json_text) > 300 else ""), language="json")
-                        else:
-                            st.info("ℹ️ No quote fixes needed")
-                        
-                        st.write("**Step 5:** Parsing JSON")
-                    
-                    parsed_data = json.loads(json_text)
-                    
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        st.success("✅ JSON parsed successfully!")
-                        st.write("**Step 6:** Validating structure")
-                    
-                    # Convert old format to new format if needed
-                    if 'main_themes' in parsed_data:
-                        with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                            st.info("🔄 Converting old format (main_themes → themes)")
-                        parsed_data['themes'] = parsed_data.pop('main_themes')
-                    
-                    # Show final structure info
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                        st.write("**Final Structure:**")
-                        st.write(f"- Title: {parsed_data.get('title', 'N/A')}")
-                        st.write(f"- Number of main themes: {len(parsed_data.get('themes', []))}")
-                        
-                        # Count total themes and sub-themes
-                        def count_all_themes(themes):
-                            count = len(themes)
-                            for theme in themes:
-                                if theme.get('sub_themes'):
-                                    count += count_all_themes(theme['sub_themes'])
-                            return count
-                        
-                        total_themes = count_all_themes(parsed_data.get('themes', []))
-                        st.write(f"- Total themes (including sub-themes): {total_themes}")
-                        
-                        if total_themes > 0:
-                            st.success("🎉 Mind map data successfully parsed!")
-                        else:
-                            st.warning("⚠️ No themes found in parsed data")
-                    
-                    return parsed_data
-                        
-                except json.JSONDecodeError as e:
-                    with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=True):
-                        st.error(f"❌ **JSON Parse Error:** {str(e)}")
-                        st.write(f"Error at position: {e.pos if hasattr(e, 'pos') else 'unknown'}")
-                        st.write("**Step 7:** Falling back to text extraction")
-                    return create_themes_from_text_with_debug(mind_map_data)
-            else:
-                with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                    st.warning("⚠️ No JSON structure found in AI response")
-                    st.write("**Step 3:** Falling back to text extraction")
-                return create_themes_from_text_with_debug(mind_map_data)
-        else:
-            with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-                st.info("ℹ️ Response is already structured data")
-            return mind_map_data
-            
-    except Exception as e:
-        with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=True):
-            st.error(f"❌ **Unexpected Error:** {str(e)}")
-            st.write("**Emergency Fallback:** Creating basic structure")
-        return create_themes_from_text_with_debug(str(mind_map_data))
-
-def get_pastel_colors():
-    """Return a list of pastel colors for mind map visualization"""
-    return [
-        '#FFB3BA',  # Light pink
-        '#BAFFC9',  # Light green
-        '#BAE1FF',  # Light blue
-        '#FFFFBA',  # Light yellow
-        '#FFD1BA',  # Light orange
-        '#E0BBE4',  # Light purple
-        '#B5EAD7',  # Light teal
-        '#FFC9DE',  # Light rose
-        '#C7CEEA',  # Light lavender
-        '#B9FBC0'   # Light mint
-    ]
-
-def count_total_nodes(themes, max_level=None, current_level=0):
-    """Count total nodes up to a certain level"""
-    if max_level and current_level >= max_level:
-        return 0
-    
-    count = len(themes)
-    for theme in themes:
-        if 'sub_themes' in theme and theme['sub_themes']:
-            count += count_total_nodes(theme['sub_themes'], max_level, current_level + 1)
-    return count
-
-def build_node_tree(themes, parent_id="root", level=0, max_level=None, colors=None, expanded_nodes=None):
-    """Build tree structure with nodes and edges"""
-    if colors is None:
-        colors = get_pastel_colors()
-    if expanded_nodes is None:
-        expanded_nodes = set()
-    if max_level and level >= max_level:
-        return [], []
-    
-    nodes = []
-    edges = []
-    
-    for i, theme in enumerate(themes):
-        node_id = theme.get('id', f"{parent_id}_theme_{i}")
-        theme_name = theme.get('name', f"Theme {i+1}")
-        theme_summary = theme.get('summary', '')
-        
-        # Determine if this node should be visible
-        is_expanded = node_id in expanded_nodes
-        has_children = 'sub_themes' in theme and theme['sub_themes']
-        
-        # Create node data
-        node = {
-            'id': node_id,
-            'name': theme_name,
-            'summary': theme_summary,
-            'level': level,
-            'parent_id': parent_id,
-            'has_children': has_children,
-            'is_expanded': is_expanded,
-            'color': colors[level % len(colors)],
-            'is_leaf': not has_children
-        }
-        nodes.append(node)
-        
-        # Create edge to parent
-        if parent_id != "root":
-            edges.append((parent_id, node_id))
-        
-        # Add children if expanded or within visible levels
-        if has_children and (is_expanded or level < st.session_state.mindmap_visible_levels):
-            child_nodes, child_edges = build_node_tree(
-                theme['sub_themes'], 
-                node_id, 
-                level + 1, 
-                max_level,
-                colors, 
-                expanded_nodes
-            )
-            nodes.extend(child_nodes)
-            edges.extend(child_edges)
-    
-    return nodes, edges
-
-def calculate_node_positions(nodes, edges):
-    """Calculate optimal positions for nodes using a tree layout"""
-    positions = {}
-    
-    # Group nodes by level
-    levels = {}
-    for node in nodes:
-        level = node['level']
-        if level not in levels:
-            levels[level] = []
-        levels[level].append(node)
-    
-    # Position nodes level by level
-    for level, level_nodes in levels.items():
-        y_pos = -level * 1.5  # Vertical spacing
-        node_count = len(level_nodes)
-        
-        if node_count == 1:
-            positions[level_nodes[0]['id']] = (0, y_pos)
-        else:
-            # Spread nodes horizontally
-            total_width = min(node_count * 2, 8)  # Limit total width
-            start_x = -total_width / 2
-            
-            for i, node in enumerate(level_nodes):
-                x_pos = start_x + (i * total_width / max(1, node_count - 1))
-                positions[node['id']] = (x_pos, y_pos)
-    
-    return positions
-
-def create_text_mind_map(mind_map_data):
-    """Create text-based mind map when plotly is not available"""
-    try:
-        # Parse the mind map data
-        parsed_data = parse_mind_map_data(mind_map_data)
-        title = parsed_data.get('title', 'Document Analysis')
-        themes = parsed_data.get('themes', [])
-        
-        if not themes:
-            return "No themes found in the mind map data"
-        
-        # Create text-based mind map
-        text_output = f"# 🧠 {title}\n\n"
-        
-        def format_theme_text(theme_list, level=0):
-            result = ""
-            indent = "  " * level
-            bullet = "•" if level == 0 else ("◦" if level == 1 else "-")
-            
-            for theme in theme_list:
-                name = theme.get('name', 'Unnamed Theme')
-                summary = theme.get('summary', '')
-                result += f"{indent}{bullet} **{name}**"
-                if summary:
-                    result += f": {summary}"
-                result += "\n"
-                
-                # Add sub-themes recursively
-                if theme.get('sub_themes'):
-                    result += format_theme_text(theme['sub_themes'], level + 1)
-            
-            return result
-        
-        text_output += format_theme_text(themes)
-        text_output += "\n\n💡 *Interactive visualization requires plotly package. Text version shown above.*"
-        
-        return text_output
-        
-    except Exception as e:
-        return f"Error creating text mind map: {str(e)}"
-
-def create_mind_map_visualization(mind_map_data):
-    """Create advanced interactive mind map with unlimited depth"""
-    # Check if plotly is available
-    if not PLOTLY_AVAILABLE:
-        st.warning(f"🔧 Plotly not available (PLOTLY_AVAILABLE={PLOTLY_AVAILABLE}). Using text fallback.")
-        return create_text_mind_map(mind_map_data)
-    
-    try:
-        # Parse the mind map data
-        parsed_data = parse_mind_map_data(mind_map_data)
-        title = parsed_data.get('title', 'Document Analysis')
-        themes = parsed_data.get('themes', [])
-        
-        if not themes:
-            st.warning("No themes found in the mind map data")
-            return None
-        
-        # Check if we need to hide levels due to too many nodes
-        total_nodes = count_total_nodes(themes, max_level=4)
-        if total_nodes > 50:  # Too many nodes, limit visibility
-            st.session_state.mindmap_visible_levels = 2
-        elif total_nodes > 25:
-            st.session_state.mindmap_visible_levels = 3
-        else:
-            st.session_state.mindmap_visible_levels = 4
-        
-        # Build the node tree
-        nodes, edges = build_node_tree(
-            themes, 
-            expanded_nodes=st.session_state.mindmap_expanded_nodes
-        )
-        
-        if not nodes:
-            st.warning("No visible nodes to display")
-            return None
-        
-        # Calculate positions
-        positions = calculate_node_positions(nodes, edges)
-        
-        # Create Plotly figure
-        if not PLOTLY_AVAILABLE or go is None:
-            st.warning("Plotly not available, showing text version")
-            return create_text_mind_map(mind_map_data)
-        
-        try:
-            fig = go.Figure()
-        except Exception as e:
-            st.error(f"Failed to create plotly figure: {e}")
-            return create_text_mind_map(mind_map_data)
-        
-        # Add edges (connections between nodes)
-        for parent_id, child_id in edges:
-            if parent_id in positions and child_id in positions:
-                x0, y0 = positions[parent_id]
-                x1, y1 = positions[child_id]
-                
-                # Create curved line
-                mid_x = (x0 + x1) / 2
-                mid_y = (y0 + y1) / 2 + 0.2  # Slight curve
-                
-                fig.add_trace(go.Scatter(
-                    x=[x0, mid_x, x1], 
-                    y=[y0, mid_y, y1],
-                    mode='lines',
-                    line=dict(width=2, color='rgba(100,100,100,0.5)', shape='spline'),
-                    showlegend=False,
-                    hoverinfo='skip'
-                ))
-        
-        # Add root node
-        fig.add_trace(go.Scatter(
-            x=[0], y=[1],
-            mode='markers+text',
-            marker=dict(
-                size=40,
-                color='#FF69B4',  # Bright pink for root
-                line=dict(width=3, color='white')
-            ),
-            text=[title],
-            textposition="middle center",
-            textfont=dict(size=12, color='white'),
-            showlegend=False,
-            hovertemplate=f'<b>{title}</b><br>Click themes below to explore<extra></extra>',
-            customdata=['root']
-        ))
-        
-        # Add theme nodes
-        for node in nodes:
-            if node['id'] in positions:
-                x, y = positions[node['id']]
-                
-                # Node size based on level (smaller as we go deeper)
-                size = max(30 - (node['level'] * 5), 15)
-                
-                # Different markers for expandable vs leaf nodes
-                symbol = 'circle' if not node['has_children'] else ('circle-open' if not node['is_expanded'] else 'circle')
-                
-                # Hover text
-                hover_text = f"<b>{node['name']}</b><br>{node['summary']}"
-                if node['has_children'] and not node['is_expanded']:
-                    hover_text += "<br><i>Click to expand</i>"
-                elif node['is_leaf']:
-                    hover_text += "<br><i>Click to generate detailed notes</i>"
-                
-                fig.add_trace(go.Scatter(
-                    x=[x], y=[y],
-                    mode='markers+text',
-                    marker=dict(
-                        size=size,
-                        color=node['color'],
-                        line=dict(width=2, color='white'),
-                        symbol=symbol
-                    ),
-                    text=[node['name']],
-                    textposition="middle center",
-                    textfont=dict(size=10, color='black'),
-                    showlegend=False,
-                    hovertemplate=hover_text + '<extra></extra>',
-                    customdata=[node['id']]
-                ))
-        
-        # Update layout
-        fig.update_layout(
-            title=f"📊 Interactive Mind Map: {title}",
-            showlegend=False,
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-5, 5]),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            height=700,
-            margin=dict(l=20, r=20, t=60, b=20),
-            font=dict(family="Arial, sans-serif", size=12)
-        )
-        
-        # Store the parsed data for click handling
-        st.session_state.current_mindmap_data = parsed_data
-        
-        return fig
-        
-    except Exception as e:
-        st.error(f"Error creating advanced mind map: {e}")
-        import traceback
-        st.error(traceback.format_exc())
-        return None
-
-def handle_mindmap_click(node_id, mind_map_data):
-    """Handle clicks on mind map nodes"""
-    if node_id == 'root':
-        return
-    
-    # Find the clicked node in the data structure
-    def find_node_by_id(themes, target_id):
-        for theme in themes:
-            if theme.get('id') == target_id:
-                return theme
-            if 'sub_themes' in theme and theme['sub_themes']:
-                result = find_node_by_id(theme['sub_themes'], target_id)
-                if result:
-                    return result
-        return None
-    
-    clicked_node = find_node_by_id(mind_map_data.get('themes', []), node_id)
-    
-    if clicked_node:
-        has_children = 'sub_themes' in clicked_node and clicked_node['sub_themes']
-        
-        if has_children:
-            # Toggle expansion
-            if node_id in st.session_state.mindmap_expanded_nodes:
-                st.session_state.mindmap_expanded_nodes.remove(node_id)
-                st.success(f"Collapsed: {clicked_node['name']}")
-            else:
-                st.session_state.mindmap_expanded_nodes.add(node_id)
-                st.success(f"Expanded: {clicked_node['name']}")
-        else:
-            # Leaf node - generate detailed notes
-            generate_focused_notes(clicked_node)
-
-def generate_focused_notes(node_data):
-    """Generate focused notes for a specific topic and add to chat"""
-    topic_name = node_data['name']
-    topic_summary = node_data.get('summary', '')
-    
-    # Create a focused question for the AI
-    focused_question = f"Please provide detailed information and insights about '{topic_name}'. {topic_summary}"
-    
-    # Add to chat history
-    st.session_state.chat_history.append({
-        "role": "user",
-        "content": f"[Mind Map Topic] {topic_name}"
-    })
-    
-    with st.spinner(f"Generating detailed notes about '{topic_name}'..."):
-        # Get relevant context from documents
-        context = st.session_state.vector_store.get_context_for_query(focused_question)
-        
-        # Get AI response
-        response = st.session_state.ai_client.chat_with_document(
-            user_question=focused_question,
-            document_context=context,
-            max_tokens=2500,
-            temperature=0.7
-        )
-        
-        if response["success"]:
-            # Add AI response to chat
-            personality_name = st.session_state.ai_client.personalities[
-                st.session_state.ai_client.current_personality
-            ]["name"]
-            
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": response["content"],
-                "personality": personality_name
-            })
-            # Save chat history persistently
-            save_chat_history()
-            st.success(f"Generated detailed notes for '{topic_name}' - check the chat!")
-        else:
-            st.error(f"Failed to generate notes: {response['error']}")
-
 def generate_mind_map():
-    """Generate mind map of all uploaded documents using the new MindMapGenerator"""
+    """Generate mind map with proper regenerate handling"""
     if not st.session_state.documents:
         st.warning("No documents to analyze")
         return
     
-    # Check cache first
+    # Check for forced regeneration
+    if st.session_state.get("force_regenerate_mindmap", False):
+        st.session_state.force_regenerate_mindmap = False
+        generate_fresh_mind_map()
+        return
+    
+    # Check cache
     cached_result = get_cached_analysis("mind_map")
     if cached_result:
-        st.subheader("🧠 Document Mind Map")
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.caption("✅ Cached result from previous analysis")
+            st.info("🧠 Using cached mind map")
         with col2:
-            if st.button("🔄 Regenerate", key="regen_mindmap"):
-                # Clear cache and regenerate immediately
-                documents_hash = get_documents_hash()
-                personality = st.session_state.ai_client.current_personality
-                cache_key = get_cache_key(documents_hash, "mind_map", personality)
-                if cache_key in st.session_state.cached_analyses:
-                    del st.session_state.cached_analyses[cache_key]
-                # Generate fresh mind map immediately
-                generate_fresh_mind_map()
-                return
+            st.button("🔄 Regenerate", key="regen_mindmap", on_click=regenerate_mindmap)
         
-        # Display the cached mind map
         display_mind_map_results(cached_result["content"])
         return
     
-    # Generate fresh mind map
     generate_fresh_mind_map()
 
-def generate_fresh_mind_map():
-    """Generate fresh mind map using the new MindMapGenerator"""
-    # Combine text from all successful documents
-    all_text = ""
-    doc_titles = []
-    
-    for filename, doc_info in st.session_state.documents.items():
-        if doc_info["success"]:
-            doc_text = doc_info['text'][:15000]  # Increase limit for more detailed analysis
-            all_text += f"\n\n=== {filename} ===\n{doc_text}"
-            doc_titles.append(filename)
-    
-    if all_text:
-        # Generate mind map using the new generator
-        mind_map_data = st.session_state.mindmap_generator.generate_mind_map(all_text, doc_titles)
-        
-        if "error" not in mind_map_data:
-            # Save to cache
-            save_analysis_cache("mind_map", mind_map_data)
-            
-            st.subheader("🧠 Document Mind Map")
-            st.caption(f"🆕 Freshly analyzed {len(doc_titles)} documents: {', '.join(doc_titles)}")
-            
-            # Display the mind map
-            display_mind_map_results(mind_map_data)
-            st.success("✅ Mind map regenerated successfully!")
-        else:
-            st.error(f"❌ Failed to generate mind map: {mind_map_data['error']}")
-    else:
-        st.error("❌ No document content available for analysis")
+# Main application layout
+st.title("🤖 AI Document Analyzer & Chat")
+st.markdown("*A NotebookLM-inspired document analysis tool with AI-powered conversations*")
 
-if __name__ == "__main__":
-    main()
+# Sidebar for settings and document management
+with st.sidebar:
+    st.header("📁 Document Management")
+    upload_document()
+    
+    st.markdown("---")
+    display_documents()
+    
+    st.markdown("---")
+    
+    # AI Settings
+    st.header("🤖 AI Settings")
+    
+    # Model selection
+    available_models = st.session_state.ai_client.available_models
+    if available_models:
+        current_model_key = None
+        for key, value in available_models.items():
+            if value == st.session_state.ai_client.current_model:
+                current_model_key = key
+                break
+        
+        if current_model_key:
+            model_options = list(available_models.keys())
+            current_index = model_options.index(current_model_key)
+            
+            selected_model = st.selectbox(
+                "AI Model",
+                options=model_options,
+                index=current_index,
+                help="Choose the AI model for analysis and chat"
+            )
+            
+            if selected_model != current_model_key:
+                if st.session_state.ai_client.set_model(selected_model):
+                    st.success(f"Switched to {selected_model}")
+                else:
+                    st.error(f"Failed to switch to {selected_model}")
+    
+    # Personality selection
+    personalities = st.session_state.ai_client.get_available_personalities()
+    personality_options = list(personalities.keys())
+    personality_names = [personalities[key]["name"] for key in personality_options]
+    
+    current_personality_index = personality_options.index(st.session_state.ai_client.current_personality)
+    
+    selected_personality = st.selectbox(
+        "AI Personality",
+        options=personality_options,
+        format_func=lambda x: personalities[x]["name"],
+        index=current_personality_index,
+        help="Choose AI personality for specialized analysis perspectives"
+    )
+    
+    if selected_personality != st.session_state.ai_client.current_personality:
+        if st.session_state.ai_client.set_personality(selected_personality):
+            st.success(f"Switched to {personalities[selected_personality]['name']}")
+            # Clear caches when personality changes
+            st.session_state.cached_analyses = {}
+        else:
+            st.error(f"Failed to switch personality")
+    
+    # Display current AI info
+    ai_info = st.session_state.ai_client.get_service_info()
+    st.info(f"**Provider**: {ai_info['provider']}\n**Status**: {ai_info['api_key_status']}")
+    
+    st.markdown("---")
+    
+    # Clear chat history
+    if st.button("🗑️ Clear Chat History"):
+        clear_persistent_chat()
+        st.success("Chat history cleared!")
+
+# Main content area
+if st.session_state.documents:
+    # Create tabs for different functionalities
+    tab1, tab2 = st.tabs(["🔍 Document Analysis", "💬 AI Chat"])
+    
+    with tab1:
+        st.header("🔍 Quick Analysis")
+        
+        if st.button("📝 Generate Summary", use_container_width=True):
+            generate_document_summary()
+        
+        if st.button("🎯 Extract Key Points", use_container_width=True):
+            extract_key_points()
+        
+        if st.button("📈 Analyze Sentiment", use_container_width=True):
+            analyze_sentiment()
+        
+        if st.button("🧠 Generate Mind Map", use_container_width=True):
+            generate_mind_map()
+    
+    with tab2:
+        st.header("💬 AI-Powered Document Chat")
+        
+        # Display chat history
+        if "chat_messages" not in st.session_state:
+            st.session_state.chat_messages = []
+        
+        # Chat interface
+        for i, message in enumerate(st.session_state.chat_messages):
+            if message["role"] == "user":
+                with st.chat_message("user"):
+                    st.write(message["message"])
+            else:
+                with st.chat_message("assistant"):
+                    st.write(message["message"])
+        
+        # Chat input
+        user_question = st.chat_input("Ask a question about your documents...")
+        
+        if user_question:
+            # Add user message to chat
+            st.session_state.chat_messages.append({"role": "user", "message": user_question})
+            
+            # Display user message
+            with st.chat_message("user"):
+                st.write(user_question)
+            
+            # Get relevant context from documents
+            with st.spinner("🤖 Thinking..."):
+                # Use vector store to find relevant chunks
+                results = st.session_state.vector_store.search(user_question)
+                
+                if results:
+                    context = "\n\n".join([result["content"] for result in results[:3]])
+                else:
+                    # Fallback: use first chunk of each document
+                    context_parts = []
+                    for filename, doc_info in st.session_state.documents.items():
+                        if doc_info["success"] and doc_info["chunks"]:
+                            context_parts.append(doc_info["chunks"][0]["text"])
+                    context = "\n\n".join(context_parts)
+                
+                # Get AI response
+                response = st.session_state.ai_client.chat_with_document(
+                    user_question,
+                    context,
+                    max_tokens=1000
+                )
+                
+                # Display AI response
+                with st.chat_message("assistant"):
+                    if response["success"]:
+                        ai_message = response["content"]
+                        st.write(ai_message)
+                        
+                        # Add to chat history
+                        st.session_state.chat_messages.append({"role": "assistant", "message": ai_message})
+                        
+                        # Save chat history
+                        save_chat_history()
+                    else:
+                        error_message = f"Sorry, I encountered an error: {response['error']}"
+                        st.error(error_message)
+                        st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
+
+else:
+    st.info("👆 Upload some documents to get started!")
+    st.markdown("""
+    ### Welcome to AI Document Analyzer & Chat!
+    
+    This tool helps you:
+    
+    🔍 **Analyze Documents**: Extract summaries, key points, and insights  
+    🧠 **Generate Mind Maps**: Visual representations of document content  
+    💬 **Chat with Documents**: Ask questions and get contextual answers  
+    🎭 **Multiple AI Personalities**: Specialized perspectives (Academic, Business, Legal, etc.)  
+    
+    **Supported formats**: PDF, Word documents (.docx, .doc), Plain text (.txt)
+    
+    Upload your documents using the sidebar to begin!
+    """)

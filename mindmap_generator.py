@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 # Mind Map Generator Module for Streamlit
 # Based on https://github.com/Dicklesworthstone/mindmap-generator
 # Adapted to work with existing OpenRouter API integration
@@ -48,7 +49,7 @@ class MindMapGenerator:
             self.similarity_func = fuzz.ratio
         else:
             self.similarity_func = fuzz_ratio
-        
+    
     def generate_mind_map(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
         """
         Generate a comprehensive mind map from document content using optimized single API call.
@@ -62,7 +63,7 @@ class MindMapGenerator:
         """
         if not document_text.strip():
             return {"error": "No document content provided"}
-            
+        
         try:
             with st.status("🚀 Generating mind map (optimized)...", expanded=True) as status:
                 st.write("Creating comprehensive mind map structure...")
@@ -78,14 +79,13 @@ class MindMapGenerator:
                     # Fallback to original method if optimized version fails
                     st.write("Falling back to detailed analysis...")
                     return self._generate_mind_map_fallback(document_text, document_titles)
-                
+                    
         except Exception as e:
             st.error(f"Error generating mind map: {str(e)}")
             return {"error": str(e)}
-    
+
     def _extract_main_themes(self, document_text: str, document_titles: List[str] = None) -> List[Dict[str, str]]:
         """Extract main themes from the document using AI analysis."""
-        
         context_info = ""
         if document_titles:
             context_info = f"Documents being analyzed: {', '.join(document_titles)}\n\n"
@@ -98,13 +98,13 @@ class MindMapGenerator:
 
 Return your response as a JSON array with this exact format:
 [
-  {{"name": "Theme Name", "summary": "Brief description of what this theme covers"}},
-  {{"name": "Another Theme", "summary": "Description of this theme"}}
+{{"name": "Theme Name", "summary": "Brief description of what this theme covers"}},
+{{"name": "Another Theme", "summary": "Description of this theme"}}
 ]
 
 Document content:
 {document_text[:4000]}"""  # Limit to prevent token overflow
-
+        
         try:
             response = self.ai_client._make_api_request(
                 messages=[{"role": "user", "content": prompt}],
@@ -115,31 +115,27 @@ Document content:
             if response["success"]:
                 # Try to parse JSON response
                 content = response["content"].strip()
-                
                 # Extract JSON from response if it's wrapped in text
                 json_match = re.search(r'\[.*\]', content, re.DOTALL)
                 if json_match:
                     json_str = json_match.group()
                     themes = json.loads(json_str)
-                    
                     # Validate structure
                     valid_themes = []
                     for theme in themes:
                         if isinstance(theme, dict) and "name" in theme and "summary" in theme:
                             valid_themes.append(theme)
-                    
                     return valid_themes
                 
-            # Fallback: extract themes from text response
-            return self._fallback_theme_extraction(response.get("content", ""))
-            
+                # Fallback: extract themes from text response
+                return self._fallback_theme_extraction(response.get("content", ""))
+                
         except Exception as e:
             st.warning(f"AI theme extraction failed: {e}")
             return self._fallback_theme_extraction(document_text)
-    
+
     def _extract_subtopics(self, document_text: str, theme: Dict[str, str]) -> List[Dict[str, str]]:
         """Extract subtopics for a specific theme."""
-        
         prompt = f"""Based on the document content, identify 3-6 specific subtopics that fall under the theme: "{theme['name']}"
 
 Theme description: {theme['summary']}
@@ -150,8 +146,8 @@ For each subtopic, provide:
 
 Return as JSON array:
 [
-  {{"name": "Subtopic Name", "summary": "What this subtopic covers"}},
-  {{"name": "Another Subtopic", "summary": "Description"}}
+{{"name": "Subtopic Name", "summary": "What this subtopic covers"}},
+{{"name": "Another Subtopic", "summary": "Description"}}
 ]
 
 Focus only on content that relates to: {theme['name']}
@@ -172,31 +168,28 @@ Document content:
                 if json_match:
                     json_str = json_match.group()
                     subtopics = json.loads(json_str)
-                    
                     valid_subtopics = []
                     for subtopic in subtopics:
                         if isinstance(subtopic, dict) and "name" in subtopic and "summary" in subtopic:
                             valid_subtopics.append(subtopic)
-                    
                     return valid_subtopics[:6]  # Limit to 6 subtopics
-            
+                    
             # Fallback
             return [{"name": f"{theme['name']} Details", "summary": f"Key details about {theme['name']}"}]
             
         except Exception:
             return [{"name": f"{theme['name']} Analysis", "summary": f"Analysis of {theme['name']}"}]
-    
+
     def _extract_details(self, document_text: str, theme: Dict[str, str], subtopic: Dict[str, str]) -> List[Dict[str, str]]:
         """Extract specific details for a subtopic."""
-        
         prompt = f"""Find 2-4 specific details, findings, or key points related to the subtopic "{subtopic['name']}" within the theme "{theme['name']}".
 
 Subtopic focus: {subtopic['summary']}
 
 Return as JSON array with specific, actionable details:
 [
-  {{"name": "Specific Detail", "summary": "Explanation of this detail"}},
-  {{"name": "Key Finding", "summary": "What this finding means"}}
+{{"name": "Specific Detail", "summary": "Explanation of this detail"}},
+{{"name": "Key Finding", "summary": "What this finding means"}}
 ]
 
 Document content:
@@ -215,41 +208,61 @@ Document content:
                 if json_match:
                     json_str = json_match.group()
                     details = json.loads(json_str)
-                    
                     valid_details = []
                     for detail in details:
                         if isinstance(detail, dict) and "name" in detail and "summary" in detail:
                             valid_details.append(detail)
-                    
                     return valid_details[:4]  # Limit to 4 details
-            
+                    
             return []  # Return empty if no valid details found
             
         except Exception:
             return []
-            
+
     def _generate_complete_mind_map(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
-        """Generate complete mind map structure in ONE optimized API call."""
+        """FIXED: Generate complete mind map structure with enhanced large document support."""
         
         context_info = ""
         if document_titles:
-            context_info = f"Document(s): {', '.join(document_titles)}\n\n"
+            context_info = f"Analyzing: {', '.join(document_titles)}\n\n"
         
-        # Simplified prompt for better JSON generation
-        prompt = f"""Analyze the document content and create a detailed mind map structure. Return ONLY valid JSON in this exact format:
+        # Enhanced document processing for large files
+        max_content_length = 15000  # Increased from 8000
+        
+        if len(document_text) > max_content_length:
+            st.info(f"📄 Large document detected ({len(document_text):,} characters). Using intelligent sampling...")
+            
+            # Intelligent sampling strategy
+            sample_size = max_content_length // 4
+            samples = []
+            
+            # Strategic samples from different parts
+            samples.append(document_text[:sample_size])  # Beginning
+            samples.append(document_text[len(document_text)//4:len(document_text)//4 + sample_size])  # Quarter
+            samples.append(document_text[len(document_text)//2:len(document_text)//2 + sample_size])  # Middle  
+            samples.append(document_text[-sample_size:])  # End
+            
+            processed_text = "\n\n[DOCUMENT SECTION]\n\n".join(samples)
+        else:
+            processed_text = document_text
+        
+        # Enhanced prompt with clearer instructions
+        prompt = f"""Analyze the document content and create a detailed mind map structure.
+
+IMPORTANT: Return ONLY the JSON object, no explanations.
 
 {{
-  "title": "Document Mind Map", 
+  "title": "Document Mind Map",
   "themes": [
     {{
-      "id": "theme_1",
+      "id": "theme_1", 
       "name": "Theme Name",
       "summary": "Brief description",
       "sub_themes": [
         {{
-          "id": "theme_1_sub_1", 
+          "id": "theme_1_sub_1",
           "name": "Subtopic Name",
-          "summary": "Brief description",
+          "summary": "Brief description", 
           "sub_themes": []
         }}
       ]
@@ -257,65 +270,124 @@ Document content:
   ]
 }}
 
-Important rules:
-- Return ONLY the JSON object, no other text
-- Use double quotes for all strings  
-- No trailing commas
-- Keep names under 50 characters
-- Generate 4-6 main themes
-- For each theme, generate 1-6 subtopics based on the actual content depth and complexity
-- Create more subtopics for complex themes with rich content
-- Create fewer subtopics for simpler themes
-- Ensure subtopics are meaningful and substantive
+Instructions:
+- Create 4-6 main themes based on actual document content
+- Each theme should have 2-4 meaningful subtopics
+- Keep names under 40 characters
+- Keep summaries under 100 characters
+- Ensure perfect JSON syntax
 
-{context_info}Document content:
-{document_text[:8000]}"""
+{context_info}Document Content:
+{processed_text}"""
 
-        try:
-            response = self.ai_client._make_api_request(
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=3500,
-                temperature=0.1   # Very low for consistent JSON structure
-            )
-            
-            if response["success"]:
-                content = response["content"].strip()
+        # Multiple attempts with progressive parameters
+        for attempt in range(3):
+            try:
+                temperature = 0.05 + (attempt * 0.05)
+                max_tokens = 4000 + (attempt * 500)
                 
-                # Clean the response before parsing
-                content = self._clean_json_response(content)
+                response = self.ai_client._make_api_request(
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
+                    temperature=temperature
+                )
                 
-                # Extract and parse JSON
-                json_match = re.search(r'\{.*\}', content, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group()
-                    
-                    # Additional JSON cleaning
-                    json_str = self._fix_json_issues(json_str)
-                    
-                    try:
-                        mind_map = json.loads(json_str)
+                if response["success"]:
+                    content = response["content"].strip()
+                    mind_map = self._process_json_response(content, attempt + 1)
+                    if mind_map:
+                        return mind_map
                         
-                        # Validate and fix structure
-                        if self._validate_and_fix_mind_map_structure(mind_map):
-                            return mind_map
-                    except json.JSONDecodeError as je:
-                        st.warning(f"JSON parsing failed at position {je.pos}: {str(je)}")
-                        # Try one more fix attempt
-                        fixed_json = self._emergency_json_fix(json_str)
-                        if fixed_json:
-                            try:
-                                mind_map = json.loads(fixed_json)
-                                if self._validate_and_fix_mind_map_structure(mind_map):
-                                    return mind_map
-                            except:
-                                pass
-            
-            return None
-            
-        except Exception as e:
-            st.warning(f"Optimized generation failed: {str(e)}")
-            return None
-    
+            except Exception as e:
+                st.warning(f"Attempt {attempt + 1} failed: {str(e)}")
+                continue
+        
+        # Fallback method
+        st.warning("⚠️ Optimized generation failed, using fallback method...")
+        return self._generate_mind_map_fallback(document_text, document_titles)
+
+    def _process_json_response(self, content: str, attempt_num: int) -> Dict[str, Any]:
+        """Process JSON response with multiple repair strategies"""
+        
+        # Strategy 1: Clean and direct parse
+        try:
+            cleaned_content = self._enhanced_json_cleaning(content)
+            mind_map = json.loads(cleaned_content)
+            if self._validate_and_fix_mind_map_structure(mind_map):
+                return mind_map
+        except:
+            pass
+        
+        # Strategy 2: Aggressive repair
+        try:
+            repaired_content = self._aggressive_json_repair(content)
+            if repaired_content:
+                mind_map = json.loads(repaired_content)
+                if self._validate_and_fix_mind_map_structure(mind_map):
+                    return mind_map
+        except:
+            pass
+        
+        return None
+
+    def _enhanced_json_cleaning(self, content: str) -> str:
+        """Enhanced JSON cleaning with better error handling"""
+        # Remove code blocks
+        content = re.sub(r'```(?:json)?\s*', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'```\s*$', '', content, flags=re.MULTILINE)
+        
+        # Find JSON boundaries accurately  
+        start_idx = content.find('{')
+        if start_idx > 0:
+            content = content[start_idx:]
+        
+        # Balance braces
+        brace_count = 0
+        end_idx = -1
+        
+        for i, char in enumerate(content):
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    end_idx = i
+                    break
+        
+        if end_idx != -1:
+            content = content[:end_idx + 1]
+        
+        # Fix common JSON issues
+        content = re.sub(r',\s*([}\]])', r'\1', content)  # Trailing commas
+        content = re.sub(r'"([^"]*)"([^",:}\]]*)"', r'"\1\2"', content)  # Broken quotes
+        
+        return content.strip()
+
+    def _aggressive_json_repair(self, content: str) -> str:
+        """More aggressive JSON repair for malformed content"""
+        
+        # Remove everything before first {
+        start_idx = content.find('{')
+        if start_idx > 0:
+            content = content[start_idx:]
+        
+        # Remove everything after last }
+        end_idx = content.rfind('}')
+        if end_idx != -1:
+            content = content[:end_idx + 1]
+        
+        # Apply multiple repair patterns
+        repairs = [
+            (r'"([^"]*)"([^",:}\]]*)"([^",:}\]]*)"', r'"\1\2\3"'),  # Fix broken quotes
+            (r',\s*([}\]])', r'\1'),  # Remove trailing commas
+            (r'([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*):',  r'\1"\2":'),  # Quote unquoted keys
+        ]
+        
+        for pattern, replacement in repairs:
+            content = re.sub(pattern, replacement, content)
+        
+        return content
+
     def _clean_json_response(self, content: str) -> str:
         """Clean AI response to extract valid JSON."""
         # Remove markdown code blocks
@@ -331,9 +403,9 @@ Important rules:
         end_idx = content.rfind('}')
         if end_idx != -1:
             content = content[:end_idx + 1]
-            
+        
         return content.strip()
-    
+
     def _fix_json_issues(self, json_str: str) -> str:
         """Fix common JSON formatting issues."""
         # Fix single quotes to double quotes
@@ -351,7 +423,7 @@ Important rules:
         json_str = re.sub(r']\s*\[', r'], [', json_str)
         
         return json_str
-    
+
     def _emergency_json_fix(self, json_str: str) -> str:
         """Emergency JSON fix for severely malformed JSON."""
         try:
@@ -378,17 +450,17 @@ Important rules:
             return json_str
         except:
             return None
-    
+
     def _validate_and_fix_mind_map_structure(self, mind_map: Dict) -> bool:
         """Validate and fix mind map structure."""
         try:
             # Ensure required keys exist
             if "title" not in mind_map:
                 mind_map["title"] = "Document Mind Map"
-            
+                
             if "themes" not in mind_map:
                 mind_map["themes"] = []
-            
+                
             if not isinstance(mind_map["themes"], list):
                 mind_map["themes"] = []
             
@@ -436,7 +508,7 @@ Important rules:
         except Exception as e:
             st.warning(f"Structure validation failed: {e}")
             return False
-    
+
     def _generate_mind_map_fallback(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
         """Fallback method using original approach but optimized."""
         # Simplified fallback - fewer API calls
@@ -473,22 +545,21 @@ Important rules:
             mind_map_data["themes"].append(theme_data)
         
         return mind_map_data
-    
+
     def _fallback_theme_extraction(self, text: str) -> List[Dict[str, str]]:
         """Fallback method to extract themes when AI parsing fails."""
         themes = []
         
         # Look for patterns that might indicate themes
         lines = [line.strip() for line in text.split('\n') if line.strip()]
-        
         potential_themes = []
+        
         for line in lines:
             # Look for lines that seem like headings or important points
-            if (len(line) > 10 and len(line) < 100 and 
+            if (len(line) > 10 and len(line) < 100 and
                 (line[0].isupper() or 
                  any(word in line.lower() for word in ['key', 'main', 'important', 'analysis', 'finding']) or
                  line.startswith(('1.', '2.', '3.', '4.', '5.', '-', '*')))):
-                
                 clean_line = re.sub(r'^[\d\.\-\*\s]+', '', line).strip()
                 if len(clean_line) > 5:
                     potential_themes.append(clean_line)
@@ -509,7 +580,7 @@ Important rules:
             ]
         
         return themes
-    
+
     def _generate_title(self, document_titles: List[str] = None) -> str:
         """Generate a title for the mind map."""
         if document_titles:
@@ -518,13 +589,14 @@ Important rules:
             else:
                 return f"Mind Map: {len(document_titles)} Documents"
         return "Document Mind Map"
-    
+
     def export_to_mermaid(self, mind_map_data: Dict[str, Any]) -> str:
         """Export mind map to Mermaid syntax for interactive visualization."""
         if "error" in mind_map_data:
-            return f"graph TD\n    A[Error: {mind_map_data['error']}]"
+            return f"graph TD\n A[Error: {mind_map_data['error']}]"
         
         mermaid_lines = ["graph TD"]
+        
         # Clean title and ensure mermaid compatibility
         clean_title = mind_map_data['title'][:35].replace('"', "'")
         mermaid_lines.append(f"    Root[\"{clean_title}\"]")
@@ -533,6 +605,7 @@ Important rules:
             # Create safer node ID - replace problematic characters and ensure uniqueness
             base_id = node_data["id"].replace("_", "").replace("-", "").replace(" ", "")
             node_id = f"L{level}{base_id}" if level > 0 else base_id
+            
             # Clean node name and escape quotes
             node_name = node_data["name"][:25].replace('"', "'") + ("..." if len(node_data["name"]) > 25 else "")
             
@@ -549,7 +622,7 @@ Important rules:
             add_node_to_mermaid(theme)
         
         return "\n".join(mermaid_lines)
-    
+
     def export_to_markdown(self, mind_map_data: Dict[str, Any]) -> str:
         """Export mind map to markdown format."""
         if "error" in mind_map_data:
