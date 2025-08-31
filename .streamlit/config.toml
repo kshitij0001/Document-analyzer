@@ -1,0 +1,14 @@
+[server]
+headless = true
+port = 5000
+address = "0.0.0.0"
+fileWatcherType = "poll"
+
+[browser]
+gatherUsageStats = false
+
+[client]
+showErrorDetails = false
+
+[global]
+suppressDeprecationWarnings = true
