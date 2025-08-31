@@ -633,8 +633,9 @@ def generate_document_summary():
             cache_key = get_cache_key(documents_hash, "summary", personality)
             if cache_key in st.session_state.cached_analyses:
                 del st.session_state.cached_analyses[cache_key]
-            st.rerun()  # Refresh to trigger regeneration
-        return
+            # Force regeneration immediately
+            generate_fresh_summary()
+            return
     
     generate_fresh_summary()
 
@@ -680,8 +681,9 @@ def extract_key_points():
             cache_key = get_cache_key(documents_hash, "key_points", personality)
             if cache_key in st.session_state.cached_analyses:
                 del st.session_state.cached_analyses[cache_key]
-            st.rerun()  # Refresh to trigger regeneration
-        return
+            # Force regeneration immediately
+            generate_fresh_key_points()
+            return
     
     generate_fresh_key_points()
 
@@ -727,8 +729,9 @@ def analyze_sentiment():
             cache_key = get_cache_key(documents_hash, "sentiment", personality)
             if cache_key in st.session_state.cached_analyses:
                 del st.session_state.cached_analyses[cache_key]
-            st.rerun()  # Refresh to trigger regeneration
-        return
+            # Force regeneration immediately
+            generate_fresh_sentiment()
+            return
     
     generate_fresh_sentiment()
 
@@ -1374,7 +1377,9 @@ def generate_mind_map():
                 cache_key = get_cache_key(documents_hash, "mind_map", personality)
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
-                st.rerun()
+                # Force regeneration immediately
+                generate_fresh_mind_map()
+                return
         
         # Display the cached mind map
         display_mind_map_results(cached_result["content"])
