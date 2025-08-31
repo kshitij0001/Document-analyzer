@@ -265,12 +265,12 @@ Important rules:
 - Generate 4-6 main themes with 2-4 subtopics each
 
 {context_info}Document content:
-{document_text[:4000]}"""
+{document_text[:8000]}"""
 
         try:
             response = self.ai_client._make_api_request(
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=2500,
+                max_tokens=3500,
                 temperature=0.1   # Very low for consistent JSON structure
             )
             
@@ -521,11 +521,16 @@ Important rules:
             return f"graph TD\n    A[Error: {mind_map_data['error']}]"
         
         mermaid_lines = ["graph TD"]
-        mermaid_lines.append(f"    Root[\"{mind_map_data['title']}\"]")
+        # Clean title and ensure mermaid compatibility
+        clean_title = mind_map_data['title'][:35].replace('"', "'")
+        mermaid_lines.append(f"    Root[\"{clean_title}\"]")
         
         def add_node_to_mermaid(node_data: Dict, parent_id: str = "Root", level: int = 1):
-            node_id = node_data["id"].replace("_", "")
-            node_name = node_data["name"][:30] + ("..." if len(node_data["name"]) > 30 else "")
+            # Create safer node ID - replace problematic characters and ensure uniqueness
+            base_id = node_data["id"].replace("_", "").replace("-", "").replace(" ", "")
+            node_id = f"L{level}{base_id}" if level > 0 else base_id
+            # Clean node name and escape quotes
+            node_name = node_data["name"][:25].replace('"', "'") + ("..." if len(node_data["name"]) > 25 else "")
             
             # Add the node
             mermaid_lines.append(f"    {node_id}[\"{node_name}\"]")

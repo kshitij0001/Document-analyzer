@@ -237,10 +237,6 @@ def display_mind_map_results(mind_map_data):
             )
             st.info("💡 You can also copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for further customization!")
             
-        # Text fallback if diagram doesn't show
-        with st.expander("📝 Text Version (Fallback)"):
-            text_version = create_text_mind_map(mind_map_data)
-            st.markdown(text_version)
 
 def display_mind_map_tree(mind_map_data):
     """Display mind map as an interactive tree structure"""
@@ -254,32 +250,65 @@ def display_mind_map_tree(mind_map_data):
         return
     
     for i, theme in enumerate(themes):
-        with st.expander(f"🎯 {theme['name']}", expanded=i < 3):  # Auto-expand first 3
-            st.write(theme.get('summary', 'No summary available'))
+        # Show more prominent theme header with metrics
+        with st.expander(f"🎯 **{theme['name']}**", expanded=i < 2):  # Auto-expand first 2 for better focus
+            # Enhanced theme display with structured information
+            st.markdown(f"**Overview:** {theme.get('summary', 'No summary available')}")
             
             sub_themes = theme.get('sub_themes', [])
             if sub_themes:
-                st.write("**Sub-topics:**")
+                st.markdown(f"**Analysis Depth:** {len(sub_themes)} key areas identified")
+                st.markdown("---")
+                
                 for j, sub_theme in enumerate(sub_themes):
-                    with st.expander(f"📌 {sub_theme['name']}", expanded=False):
-                        st.write(sub_theme.get('summary', 'No summary available'))
+                    # More detailed sub-theme display
+                    st.markdown(f"### 📌 {sub_theme['name']}")
+                    
+                    # Use columns for better layout
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.markdown(f"**Key Insights:** {sub_theme.get('summary', 'No summary available')}")
                         
                         # Show details if they exist
                         details = sub_theme.get('sub_themes', [])
                         if details:
-                            st.write("**Details:**")
-                            for detail in details:
-                                st.markdown(f"• **{detail['name']}**: {detail.get('summary', 'No details available')}")
-                        
-                        # Add a button to explore this topic in chat
-                        if st.button(f"💬 Explore '{sub_theme['name']}' in Chat", key=f"explore_{theme['id']}_{j}"):
+                            st.markdown("**Specific Details:**")
+                            for k, detail in enumerate(details):
+                                st.markdown(f"   {k+1}. **{detail['name']}**: {detail.get('summary', 'No details available')}")
+                        else:
+                            # If no details, try to generate some insights based on the summary
+                            if len(sub_theme.get('summary', '')) > 50:
+                                st.markdown("**Analysis Notes:**")
+                                st.markdown(f"   • This area contains significant information requiring deeper analysis")
+                                st.markdown(f"   • Consider exploring this topic through the chat interface for detailed insights")
+                    
+                    with col2:
+                        # Action buttons in a more organized way
+                        if st.button(f"💬 Explore", key=f"explore_{theme['id']}_{j}", help=f"Deep dive into '{sub_theme['name']}'"):
                             explore_topic_in_chat(sub_theme)
+                        
+                        if st.button(f"📋 Details", key=f"detail_{theme['id']}_{j}", help=f"Generate detailed notes for '{sub_theme['name']}'"):
+                            generate_detailed_notes(sub_theme)
+                    
+                    if j < len(sub_themes) - 1:  # Add separator between sub-themes
+                        st.markdown("---")
             else:
-                st.info("No sub-topics found for this theme")
+                st.warning("Limited analysis depth available - this may indicate the theme needs more detailed exploration")
+                st.info("💡 **Tip:** Try using the 'Regenerate' button to get more detailed analysis, or explore this theme in chat.")
             
-            # Add button to explore main theme in chat
-            if st.button(f"💬 Discuss '{theme['name']}'", key=f"discuss_{theme['id']}"):
-                explore_topic_in_chat(theme)
+            # Enhanced main theme exploration
+            st.markdown("---")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button(f"💬 Discuss Theme", key=f"discuss_{theme['id']}", help=f"Start a conversation about '{theme['name']}'"):
+                    explore_topic_in_chat(theme)
+            with col2:
+                if st.button(f"🔍 Deep Analysis", key=f"analyze_{theme['id']}", help=f"Generate comprehensive analysis of '{theme['name']}'"):
+                    generate_comprehensive_analysis(theme)
+            with col3:
+                if st.button(f"📊 Data Points", key=f"data_{theme['id']}", help=f"Extract specific data and facts about '{theme['name']}'"):
+                    extract_data_points(theme)
 
 def explore_topic_in_chat(topic_data):
     """Add a topic exploration question to the chat"""
@@ -324,6 +353,117 @@ def explore_topic_in_chat(topic_data):
             st.rerun()
         else:
             st.error(f"Failed to explore topic: {response['error']}")
+
+def generate_detailed_notes(topic_data):
+    """Generate detailed notes for a specific topic"""
+    topic_name = topic_data['name']
+    topic_summary = topic_data.get('summary', '')
+    
+    question = f"Generate comprehensive, detailed notes about '{topic_name}'. Include specific facts, data, methodologies, and actionable insights. Break down the information into organized sections with bullet points and structured details."
+    
+    with st.spinner(f"Generating detailed notes for '{topic_name}'..."):
+        context = st.session_state.vector_store.get_context_for_query(question)
+        response = st.session_state.ai_client.chat_with_document(
+            user_question=question,
+            document_context=context,
+            max_tokens=2500,
+            temperature=0.5
+        )
+        
+        if response["success"]:
+            personality_name = st.session_state.ai_client.personalities[
+                st.session_state.ai_client.current_personality
+            ]["name"]
+            
+            st.session_state.chat_history.append({
+                "role": "user",
+                "content": f"[Detailed Notes] {topic_name}"
+            })
+            
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": response["content"],
+                "personality": personality_name
+            })
+            save_chat_history()
+            st.success(f"Generated detailed notes for '{topic_name}' - check the chat!")
+            st.rerun()
+        else:
+            st.error(f"Failed to generate notes: {response['error']}")
+
+def generate_comprehensive_analysis(theme_data):
+    """Generate comprehensive analysis for a theme"""
+    theme_name = theme_data['name']
+    theme_summary = theme_data.get('summary', '')
+    
+    question = f"Provide a comprehensive analysis of '{theme_name}'. Include: 1) Overview and context, 2) Key findings and insights, 3) Supporting evidence and data, 4) Implications and significance, 5) Related concepts and connections. Be thorough and analytical."
+    
+    with st.spinner(f"Generating comprehensive analysis for '{theme_name}'..."):
+        context = st.session_state.vector_store.get_context_for_query(question)
+        response = st.session_state.ai_client.chat_with_document(
+            user_question=question,
+            document_context=context,
+            max_tokens=3000,
+            temperature=0.4
+        )
+        
+        if response["success"]:
+            personality_name = st.session_state.ai_client.personalities[
+                st.session_state.ai_client.current_personality
+            ]["name"]
+            
+            st.session_state.chat_history.append({
+                "role": "user",
+                "content": f"[Comprehensive Analysis] {theme_name}"
+            })
+            
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": response["content"],
+                "personality": personality_name
+            })
+            save_chat_history()
+            st.success(f"Generated comprehensive analysis for '{theme_name}' - check the chat!")
+            st.rerun()
+        else:
+            st.error(f"Failed to generate analysis: {response['error']}")
+
+def extract_data_points(theme_data):
+    """Extract specific data points and facts for a theme"""
+    theme_name = theme_data['name']
+    theme_summary = theme_data.get('summary', '')
+    
+    question = f"Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'. Present as organized lists with clear categories. Include quantitative data, qualitative findings, and cited sources where available."
+    
+    with st.spinner(f"Extracting data points for '{theme_name}'..."):
+        context = st.session_state.vector_store.get_context_for_query(question)
+        response = st.session_state.ai_client.chat_with_document(
+            user_question=question,
+            document_context=context,
+            max_tokens=2000,
+            temperature=0.2  # Lower temperature for factual extraction
+        )
+        
+        if response["success"]:
+            personality_name = st.session_state.ai_client.personalities[
+                st.session_state.ai_client.current_personality
+            ]["name"]
+            
+            st.session_state.chat_history.append({
+                "role": "user",
+                "content": f"[Data Points] {theme_name}"
+            })
+            
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": response["content"],
+                "personality": personality_name
+            })
+            save_chat_history()
+            st.success(f"Extracted data points for '{theme_name}' - check the chat!")
+            st.rerun()
+        else:
+            st.error(f"Failed to extract data points: {response['error']}")
 
 def add_debug_info(message):
     """Add debug information to global debug log"""
@@ -1459,8 +1599,7 @@ def generate_mind_map():
                 cache_key = get_cache_key(documents_hash, "mind_map", personality)
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
-                generate_fresh_mind_map()
-                return
+                st.rerun()
         
         # Display the cached mind map
         display_mind_map_results(cached_result["content"])
@@ -1477,7 +1616,7 @@ def generate_fresh_mind_map():
     
     for filename, doc_info in st.session_state.documents.items():
         if doc_info["success"]:
-            doc_text = doc_info['text'][:5000]  # Limit to 5000 chars per doc
+            doc_text = doc_info['text'][:15000]  # Increase limit for more detailed analysis
             all_text += f"\n\n=== {filename} ===\n{doc_text}"
             doc_titles.append(filename)
     
