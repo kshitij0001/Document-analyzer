@@ -235,60 +235,76 @@ Document content:
         if document_titles:
             context_info = f"Document(s): {', '.join(document_titles)}\n\n"
         
-        # Optimized prompt that generates the entire structure at once
-        prompt = f"""Create a comprehensive mind map from the following document(s). Generate a complete hierarchical structure with themes, subtopics, and details.
+        # Simplified prompt for better JSON generation
+        prompt = f"""Analyze the document and create a structured mind map. Return ONLY valid JSON in this exact format:
 
-{context_info}Return ONLY a JSON object with this exact structure:
 {{
-  "title": "Document Mind Map",
+  "title": "Document Mind Map", 
   "themes": [
     {{
       "id": "theme_1",
-      "name": "Main Theme Name",
-      "summary": "Brief description of this theme",
+      "name": "Theme Name",
+      "summary": "Brief description",
       "sub_themes": [
         {{
-          "id": "theme_1_sub_1",
+          "id": "theme_1_sub_1", 
           "name": "Subtopic Name",
-          "summary": "Description of subtopic",
-          "sub_themes": [
-            {{
-              "id": "theme_1_sub_1_detail_1",
-              "name": "Specific Detail",
-              "summary": "Detailed explanation",
-              "sub_themes": []
-            }}
-          ]
+          "summary": "Brief description",
+          "sub_themes": []
         }}
       ]
     }}
   ]
 }}
 
-Generate 4-6 main themes, 3-5 subtopics per theme, and 2-3 details per subtopic. Keep names concise (2-4 words) and summaries brief (1-2 sentences).
+Important rules:
+- Return ONLY the JSON object, no other text
+- Use double quotes for all strings  
+- No trailing commas
+- Keep names under 50 characters
+- Generate 4-6 main themes with 2-4 subtopics each
 
-Document content:
-{document_text[:5000]}"""  # Increased limit for better context
+{context_info}Document content:
+{document_text[:4000]}"""
 
         try:
             response = self.ai_client._make_api_request(
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=3000,  # Increased for complete structure
-                temperature=0.2   # Lower for more consistent structure
+                max_tokens=2500,
+                temperature=0.1   # Very low for consistent JSON structure
             )
             
             if response["success"]:
                 content = response["content"].strip()
                 
-                # Extract JSON from response
+                # Clean the response before parsing
+                content = self._clean_json_response(content)
+                
+                # Extract and parse JSON
                 json_match = re.search(r'\{.*\}', content, re.DOTALL)
                 if json_match:
                     json_str = json_match.group()
-                    mind_map = json.loads(json_str)
                     
-                    # Validate structure
-                    if self._validate_mind_map_structure(mind_map):
-                        return mind_map
+                    # Additional JSON cleaning
+                    json_str = self._fix_json_issues(json_str)
+                    
+                    try:
+                        mind_map = json.loads(json_str)
+                        
+                        # Validate and fix structure
+                        if self._validate_and_fix_mind_map_structure(mind_map):
+                            return mind_map
+                    except json.JSONDecodeError as je:
+                        st.warning(f"JSON parsing failed at position {je.pos}: {str(je)}")
+                        # Try one more fix attempt
+                        fixed_json = self._emergency_json_fix(json_str)
+                        if fixed_json:
+                            try:
+                                mind_map = json.loads(fixed_json)
+                                if self._validate_and_fix_mind_map_structure(mind_map):
+                                    return mind_map
+                            except:
+                                pass
             
             return None
             
@@ -296,24 +312,125 @@ Document content:
             st.warning(f"Optimized generation failed: {str(e)}")
             return None
     
-    def _validate_mind_map_structure(self, mind_map: Dict) -> bool:
-        """Validate that the mind map has the expected structure."""
+    def _clean_json_response(self, content: str) -> str:
+        """Clean AI response to extract valid JSON."""
+        # Remove markdown code blocks
+        content = re.sub(r'```json\s*', '', content)
+        content = re.sub(r'```\s*', '', content)
+        
+        # Remove any text before first {
+        start_idx = content.find('{')
+        if start_idx > 0:
+            content = content[start_idx:]
+        
+        # Remove any text after last }
+        end_idx = content.rfind('}')
+        if end_idx != -1:
+            content = content[:end_idx + 1]
+            
+        return content.strip()
+    
+    def _fix_json_issues(self, json_str: str) -> str:
+        """Fix common JSON formatting issues."""
+        # Fix single quotes to double quotes
+        json_str = re.sub(r"'([^']*)':", r'"\1":', json_str)
+        json_str = re.sub(r":\s*'([^']*)'", r': "\1"', json_str)
+        
+        # Remove trailing commas before } and ]
+        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
+        
+        # Fix unescaped quotes in strings
+        json_str = re.sub(r':\s*"([^"]*)"([^",}\]]*)"([^",}\]]*)"', r': "\1\2\3"', json_str)
+        
+        # Ensure proper comma placement
+        json_str = re.sub(r'}\s*{', r'}, {', json_str)
+        json_str = re.sub(r']\s*\[', r'], [', json_str)
+        
+        return json_str
+    
+    def _emergency_json_fix(self, json_str: str) -> str:
+        """Emergency JSON fix for severely malformed JSON."""
         try:
-            required_keys = ["title", "themes"]
-            if not all(key in mind_map for key in required_keys):
-                return False
-                
-            if not isinstance(mind_map["themes"], list) or len(mind_map["themes"]) == 0:
-                return False
-                
-            # Check first theme has required structure
-            theme = mind_map["themes"][0]
-            theme_keys = ["id", "name", "summary", "sub_themes"]
-            if not all(key in theme for key in theme_keys):
-                return False
-                
-            return True
+            # Count braces and brackets to ensure they're balanced
+            open_braces = json_str.count('{')
+            close_braces = json_str.count('}')
+            open_brackets = json_str.count('[')
+            close_brackets = json_str.count(']')
+            
+            # Add missing closing braces/brackets
+            if open_braces > close_braces:
+                json_str += '}' * (open_braces - close_braces)
+            if open_brackets > close_brackets:
+                json_str += ']' * (open_brackets - close_brackets)
+            
+            # Remove extra closing braces/brackets
+            if close_braces > open_braces:
+                for _ in range(close_braces - open_braces):
+                    json_str = json_str.rsplit('}', 1)[0]
+            if close_brackets > open_brackets:
+                for _ in range(close_brackets - open_brackets):
+                    json_str = json_str.rsplit(']', 1)[0]
+            
+            return json_str
         except:
+            return None
+    
+    def _validate_and_fix_mind_map_structure(self, mind_map: Dict) -> bool:
+        """Validate and fix mind map structure."""
+        try:
+            # Ensure required keys exist
+            if "title" not in mind_map:
+                mind_map["title"] = "Document Mind Map"
+            
+            if "themes" not in mind_map:
+                mind_map["themes"] = []
+            
+            if not isinstance(mind_map["themes"], list):
+                mind_map["themes"] = []
+            
+            # Fix each theme structure
+            fixed_themes = []
+            for i, theme in enumerate(mind_map["themes"]):
+                if not isinstance(theme, dict):
+                    continue
+                
+                # Ensure theme has required fields
+                fixed_theme = {
+                    "id": theme.get("id", f"theme_{i+1}"),
+                    "name": str(theme.get("name", f"Theme {i+1}"))[:100],  # Limit length
+                    "summary": str(theme.get("summary", "Analysis theme"))[:200],  # Limit length
+                    "sub_themes": []
+                }
+                
+                # Fix sub-themes
+                if "sub_themes" in theme and isinstance(theme["sub_themes"], list):
+                    for j, sub_theme in enumerate(theme["sub_themes"]):
+                        if isinstance(sub_theme, dict):
+                            fixed_sub_theme = {
+                                "id": sub_theme.get("id", f"theme_{i+1}_sub_{j+1}"),
+                                "name": str(sub_theme.get("name", f"Subtopic {j+1}"))[:100],
+                                "summary": str(sub_theme.get("summary", "Analysis subtopic"))[:200],
+                                "sub_themes": sub_theme.get("sub_themes", [])
+                            }
+                            fixed_theme["sub_themes"].append(fixed_sub_theme)
+                
+                fixed_themes.append(fixed_theme)
+            
+            mind_map["themes"] = fixed_themes
+            
+            # Ensure we have at least one theme
+            if len(mind_map["themes"]) == 0:
+                mind_map["themes"].append({
+                    "id": "theme_1",
+                    "name": "Document Analysis",
+                    "summary": "Key insights from the document",
+                    "sub_themes": []
+                })
+            
+            return True
+            
+        except Exception as e:
+            st.warning(f"Structure validation failed: {e}")
             return False
     
     def _generate_mind_map_fallback(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
