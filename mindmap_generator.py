@@ -51,7 +51,7 @@ class MindMapGenerator:
         
     def generate_mind_map(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
         """
-        Generate a comprehensive mind map from document content.
+        Generate a comprehensive mind map from document content using optimized single API call.
         
         Args:
             document_text (str): The combined document content
@@ -64,65 +64,21 @@ class MindMapGenerator:
             return {"error": "No document content provided"}
             
         try:
-            # Step 1: Extract main themes/topics
-            with st.status("🔍 Analyzing document structure...", expanded=True) as status:
-                st.write("Identifying main themes and topics...")
-                main_themes = self._extract_main_themes(document_text, document_titles)
+            with st.status("🚀 Generating mind map (optimized)...", expanded=True) as status:
+                st.write("Creating comprehensive mind map structure...")
                 
-                if not main_themes:
-                    return {"error": "Failed to extract main themes from document"}
+                # Generate complete mind map in ONE API call instead of 50+
+                mind_map_data = self._generate_complete_mind_map(document_text, document_titles)
                 
-                st.write(f"Found {len(main_themes)} main themes")
+                if mind_map_data and "themes" in mind_map_data:
+                    st.write(f"✅ Generated {len(mind_map_data['themes'])} themes with subtopics")
+                    status.update(label="✅ Mind map completed in seconds!", state="complete")
+                    return mind_map_data
+                else:
+                    # Fallback to original method if optimized version fails
+                    st.write("Falling back to detailed analysis...")
+                    return self._generate_mind_map_fallback(document_text, document_titles)
                 
-                # Step 2: Generate subtopics for each theme
-                st.write("Extracting subtopics for each theme...")
-                mind_map_data = {
-                    "title": self._generate_title(document_titles),
-                    "themes": []
-                }
-                
-                for i, theme in enumerate(main_themes, 1):
-                    st.write(f"Processing theme {i}/{len(main_themes)}: {theme['name']}")
-                    
-                    # Extract subtopics for this theme
-                    subtopics = self._extract_subtopics(document_text, theme)
-                    
-                    theme_data = {
-                        "id": f"theme_{i}",
-                        "name": theme["name"],
-                        "summary": theme["summary"],
-                        "sub_themes": []
-                    }
-                    
-                    # Process subtopics
-                    for j, subtopic in enumerate(subtopics, 1):
-                        subtopic_data = {
-                            "id": f"theme_{i}_sub_{j}",
-                            "name": subtopic["name"],
-                            "summary": subtopic["summary"],
-                            "sub_themes": []
-                        }
-                        
-                        # Extract details for this subtopic (third level)
-                        if len(subtopics) <= 5:  # Only go deeper if not too many subtopics
-                            details = self._extract_details(document_text, theme, subtopic)
-                            for k, detail in enumerate(details, 1):
-                                detail_data = {
-                                    "id": f"theme_{i}_sub_{j}_detail_{k}",
-                                    "name": detail["name"],
-                                    "summary": detail["summary"],
-                                    "sub_themes": []
-                                }
-                                subtopic_data["sub_themes"].append(detail_data)
-                        
-                        theme_data["sub_themes"].append(subtopic_data)
-                    
-                    mind_map_data["themes"].append(theme_data)
-                
-                status.update(label="✅ Mind map generation completed!", state="complete")
-                
-            return mind_map_data
-            
         except Exception as e:
             st.error(f"Error generating mind map: {str(e)}")
             return {"error": str(e)}
@@ -271,6 +227,131 @@ Document content:
             
         except Exception:
             return []
+            
+    def _generate_complete_mind_map(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
+        """Generate complete mind map structure in ONE optimized API call."""
+        
+        context_info = ""
+        if document_titles:
+            context_info = f"Document(s): {', '.join(document_titles)}\n\n"
+        
+        # Optimized prompt that generates the entire structure at once
+        prompt = f"""Create a comprehensive mind map from the following document(s). Generate a complete hierarchical structure with themes, subtopics, and details.
+
+{context_info}Return ONLY a JSON object with this exact structure:
+{{
+  "title": "Document Mind Map",
+  "themes": [
+    {{
+      "id": "theme_1",
+      "name": "Main Theme Name",
+      "summary": "Brief description of this theme",
+      "sub_themes": [
+        {{
+          "id": "theme_1_sub_1",
+          "name": "Subtopic Name",
+          "summary": "Description of subtopic",
+          "sub_themes": [
+            {{
+              "id": "theme_1_sub_1_detail_1",
+              "name": "Specific Detail",
+              "summary": "Detailed explanation",
+              "sub_themes": []
+            }}
+          ]
+        }}
+      ]
+    }}
+  ]
+}}
+
+Generate 4-6 main themes, 3-5 subtopics per theme, and 2-3 details per subtopic. Keep names concise (2-4 words) and summaries brief (1-2 sentences).
+
+Document content:
+{document_text[:5000]}"""  # Increased limit for better context
+
+        try:
+            response = self.ai_client._make_api_request(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=3000,  # Increased for complete structure
+                temperature=0.2   # Lower for more consistent structure
+            )
+            
+            if response["success"]:
+                content = response["content"].strip()
+                
+                # Extract JSON from response
+                json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if json_match:
+                    json_str = json_match.group()
+                    mind_map = json.loads(json_str)
+                    
+                    # Validate structure
+                    if self._validate_mind_map_structure(mind_map):
+                        return mind_map
+            
+            return None
+            
+        except Exception as e:
+            st.warning(f"Optimized generation failed: {str(e)}")
+            return None
+    
+    def _validate_mind_map_structure(self, mind_map: Dict) -> bool:
+        """Validate that the mind map has the expected structure."""
+        try:
+            required_keys = ["title", "themes"]
+            if not all(key in mind_map for key in required_keys):
+                return False
+                
+            if not isinstance(mind_map["themes"], list) or len(mind_map["themes"]) == 0:
+                return False
+                
+            # Check first theme has required structure
+            theme = mind_map["themes"][0]
+            theme_keys = ["id", "name", "summary", "sub_themes"]
+            if not all(key in theme for key in theme_keys):
+                return False
+                
+            return True
+        except:
+            return False
+    
+    def _generate_mind_map_fallback(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
+        """Fallback method using original approach but optimized."""
+        # Simplified fallback - fewer API calls
+        main_themes = self._extract_main_themes(document_text, document_titles)
+        
+        if not main_themes:
+            return {"error": "Failed to extract themes"}
+        
+        mind_map_data = {
+            "title": self._generate_title(document_titles),
+            "themes": []
+        }
+        
+        # Process only top 5 themes for speed
+        for i, theme in enumerate(main_themes[:5], 1):
+            theme_data = {
+                "id": f"theme_{i}",
+                "name": theme["name"],
+                "summary": theme["summary"],
+                "sub_themes": []
+            }
+            
+            # Generate simple subtopics without deep details
+            subtopics = self._extract_subtopics(document_text, theme)
+            for j, subtopic in enumerate(subtopics[:4], 1):  # Limit to 4 subtopics
+                subtopic_data = {
+                    "id": f"theme_{i}_sub_{j}",
+                    "name": subtopic["name"],
+                    "summary": subtopic["summary"],
+                    "sub_themes": []  # Skip details for speed
+                }
+                theme_data["sub_themes"].append(subtopic_data)
+            
+            mind_map_data["themes"].append(theme_data)
+        
+        return mind_map_data
     
     def _fallback_theme_extraction(self, text: str) -> List[Dict[str, str]]:
         """Fallback method to extract themes when AI parsing fails."""
