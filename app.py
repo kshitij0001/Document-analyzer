@@ -180,35 +180,47 @@ def display_mind_map_results(mind_map_data):
         
         # Create interactive Mermaid diagram
         mermaid_html = f"""
-        <div id="mermaidDiv" style="text-align: center; margin: 20px 0;">
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 20px;
+                    font-family: Arial, sans-serif;
+                }}
+                .mermaid {{
+                    text-align: center;
+                    background: white;
+                }}
+                .mermaid svg {{
+                    max-width: 100%;
+                    height: auto;
+                }}
+            </style>
+        </head>
+        <body>
             <div class="mermaid">
 {mermaid_content}
             </div>
-        </div>
-        
-        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
-        <script>
-            mermaid.initialize({{
-                startOnLoad: true,
-                theme: 'default',
-                flowchart: {{
-                    useMaxWidth: true,
-                    htmlLabels: true,
-                    curve: 'basis'
-                }}
-            }});
-        </script>
-        
-        <style>
-            .mermaid {{
-                font-family: 'Arial', sans-serif;
-                font-size: 12px;
-            }}
-            .mermaid svg {{
-                max-width: 100%;
-                height: auto;
-            }}
-        </style>
+            <script>
+                mermaid.initialize({{
+                    startOnLoad: true,
+                    theme: 'default',
+                    flowchart: {{
+                        useMaxWidth: true,
+                        htmlLabels: true,
+                        curve: 'basis'
+                    }},
+                    securityLevel: 'loose'
+                }});
+                
+                // Force render after initialization
+                mermaid.run();
+            </script>
+        </body>
+        </html>
         """
         
         st.components.v1.html(mermaid_html, height=600, scrolling=True)
@@ -223,6 +235,11 @@ def display_mind_map_results(mind_map_data):
                 "text/plain"
             )
             st.info("💡 You can also copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for further customization!")
+            
+        # Text fallback if diagram doesn't show
+        with st.expander("📝 Text Version (Fallback)"):
+            text_version = create_text_mind_map(mind_map_data)
+            st.markdown(text_version)
 
 def display_mind_map_tree(mind_map_data):
     """Display mind map as an interactive tree structure"""
