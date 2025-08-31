@@ -619,23 +619,33 @@ def generate_document_summary():
         st.warning("No documents to summarize")
         return
     
+    # Check if regeneration was requested
+    if "force_regenerate_summary" in st.session_state and st.session_state.force_regenerate_summary:
+        st.session_state.force_regenerate_summary = False
+        generate_fresh_summary()
+        return
+    
     # Check cache first
     cached_result = get_cached_analysis("summary")
     if cached_result:
         st.subheader("📝 Document Summary")
-        st.caption("✅ Cached result from previous analysis")
-        st.write(cached_result["content"])
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.caption("✅ Cached result from previous analysis")
+        with col2:
+            if st.button("🔄 Regenerate", key="regen_summary"):
+                # Clear cache and set regeneration flag
+                documents_hash = get_documents_hash()
+                personality = st.session_state.ai_client.current_personality
+                cache_key = get_cache_key(documents_hash, "summary", personality)
+                if cache_key in st.session_state.cached_analyses:
+                    del st.session_state.cached_analyses[cache_key]
+                st.session_state.force_regenerate_summary = True
+                st.rerun()
+                return
         
-        if st.button("🔄 Regenerate Summary"):
-            # Clear the cache entry first
-            documents_hash = get_documents_hash()
-            personality = st.session_state.ai_client.current_personality
-            cache_key = get_cache_key(documents_hash, "summary", personality)
-            if cache_key in st.session_state.cached_analyses:
-                del st.session_state.cached_analyses[cache_key]
-            # Force regeneration immediately
-            generate_fresh_summary()
-            return
+        st.write(cached_result["content"])
+        return
     
     generate_fresh_summary()
 
@@ -656,8 +666,9 @@ def generate_fresh_summary():
                 save_analysis_cache("summary", response["content"])
                 
                 st.subheader("📝 Document Summary")
+                st.caption("🆕 Freshly generated analysis")
                 st.write(response["content"])
-                st.rerun()  # Refresh to show new content
+                st.success("✅ Summary regenerated successfully!")
             else:
                 st.error(f"Failed to generate summary: {response['error']}")
 
@@ -667,23 +678,33 @@ def extract_key_points():
         st.warning("No documents to analyze")
         return
     
+    # Check if regeneration was requested
+    if "force_regenerate_key_points" in st.session_state and st.session_state.force_regenerate_key_points:
+        st.session_state.force_regenerate_key_points = False
+        generate_fresh_key_points()
+        return
+    
     # Check cache first
     cached_result = get_cached_analysis("key_points")
     if cached_result:
         st.subheader("🎯 Key Points")
-        st.caption("✅ Cached result from previous analysis")
-        st.write(cached_result["content"])
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.caption("✅ Cached result from previous analysis")
+        with col2:
+            if st.button("🔄 Regenerate", key="regen_key_points"):
+                # Clear cache and set regeneration flag
+                documents_hash = get_documents_hash()
+                personality = st.session_state.ai_client.current_personality
+                cache_key = get_cache_key(documents_hash, "key_points", personality)
+                if cache_key in st.session_state.cached_analyses:
+                    del st.session_state.cached_analyses[cache_key]
+                st.session_state.force_regenerate_key_points = True
+                st.rerun()
+                return
         
-        if st.button("🔄 Regenerate Key Points"):
-            # Clear the cache entry first
-            documents_hash = get_documents_hash()
-            personality = st.session_state.ai_client.current_personality
-            cache_key = get_cache_key(documents_hash, "key_points", personality)
-            if cache_key in st.session_state.cached_analyses:
-                del st.session_state.cached_analyses[cache_key]
-            # Force regeneration immediately
-            generate_fresh_key_points()
-            return
+        st.write(cached_result["content"])
+        return
     
     generate_fresh_key_points()
 
@@ -704,8 +725,9 @@ def generate_fresh_key_points():
                 save_analysis_cache("key_points", response["content"])
                 
                 st.subheader("🎯 Key Points")
+                st.caption("🆕 Freshly generated analysis")
                 st.write(response["content"])
-                st.rerun()  # Refresh to show new content
+                st.success("✅ Key points regenerated successfully!")
             else:
                 st.error(f"Failed to extract key points: {response['error']}")
 
@@ -715,23 +737,33 @@ def analyze_sentiment():
         st.warning("No documents to analyze")
         return
     
+    # Check if regeneration was requested
+    if "force_regenerate_sentiment" in st.session_state and st.session_state.force_regenerate_sentiment:
+        st.session_state.force_regenerate_sentiment = False
+        generate_fresh_sentiment()
+        return
+    
     # Check cache first
     cached_result = get_cached_analysis("sentiment")
     if cached_result:
         st.subheader("📈 Sentiment Analysis")
-        st.caption("✅ Cached result from previous analysis")
-        st.write(cached_result["content"])
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.caption("✅ Cached result from previous analysis")
+        with col2:
+            if st.button("🔄 Regenerate", key="regen_sentiment"):
+                # Clear cache and set regeneration flag
+                documents_hash = get_documents_hash()
+                personality = st.session_state.ai_client.current_personality
+                cache_key = get_cache_key(documents_hash, "sentiment", personality)
+                if cache_key in st.session_state.cached_analyses:
+                    del st.session_state.cached_analyses[cache_key]
+                st.session_state.force_regenerate_sentiment = True
+                st.rerun()
+                return
         
-        if st.button("🔄 Regenerate Sentiment Analysis"):
-            # Clear the cache entry first
-            documents_hash = get_documents_hash()
-            personality = st.session_state.ai_client.current_personality
-            cache_key = get_cache_key(documents_hash, "sentiment", personality)
-            if cache_key in st.session_state.cached_analyses:
-                del st.session_state.cached_analyses[cache_key]
-            # Force regeneration immediately
-            generate_fresh_sentiment()
-            return
+        st.write(cached_result["content"])
+        return
     
     generate_fresh_sentiment()
 
@@ -752,8 +784,9 @@ def generate_fresh_sentiment():
                 save_analysis_cache("sentiment", response["content"])
                 
                 st.subheader("📈 Sentiment Analysis")
+                st.caption("🆕 Freshly generated analysis")
                 st.write(response["content"])
-                st.rerun()  # Refresh to show new content
+                st.success("✅ Sentiment analysis regenerated successfully!")
             else:
                 st.error(f"Failed to analyze sentiment: {response['error']}")
 
@@ -1362,6 +1395,12 @@ def generate_mind_map():
         st.warning("No documents to analyze")
         return
     
+    # Check if regeneration was requested
+    if "force_regenerate_mind_map" in st.session_state and st.session_state.force_regenerate_mind_map:
+        st.session_state.force_regenerate_mind_map = False
+        generate_fresh_mind_map()
+        return
+    
     # Check cache first
     cached_result = get_cached_analysis("mind_map")
     if cached_result:
@@ -1371,14 +1410,14 @@ def generate_mind_map():
             st.caption("✅ Cached result from previous analysis")
         with col2:
             if st.button("🔄 Regenerate", key="regen_mindmap"):
-                # Clear the cache entry first
+                # Clear cache and set regeneration flag
                 documents_hash = get_documents_hash()
                 personality = st.session_state.ai_client.current_personality
                 cache_key = get_cache_key(documents_hash, "mind_map", personality)
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
-                # Force regeneration immediately
-                generate_fresh_mind_map()
+                st.session_state.force_regenerate_mind_map = True
+                st.rerun()
                 return
         
         # Display the cached mind map
@@ -1409,10 +1448,11 @@ def generate_fresh_mind_map():
             save_analysis_cache("mind_map", mind_map_data)
             
             st.subheader("🧠 Document Mind Map")
-            st.caption(f"Analyzing {len(doc_titles)} documents: {', '.join(doc_titles)}")
+            st.caption(f"🆕 Freshly analyzed {len(doc_titles)} documents: {', '.join(doc_titles)}")
             
             # Display the mind map
             display_mind_map_results(mind_map_data)
+            st.success("✅ Mind map regenerated successfully!")
         else:
             st.error(f"❌ Failed to generate mind map: {mind_map_data['error']}")
     else:
