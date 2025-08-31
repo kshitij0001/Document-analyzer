@@ -103,10 +103,10 @@ if "mindmap_visible_levels" not in st.session_state:
     st.session_state.mindmap_visible_levels = 2
 
 def main():
-    # Hide heading links with CSS
+    # Hide heading links with enhanced CSS
     st.html("""
     <style>
-    /* Hide the automatic anchor links that Streamlit generates for headings */
+    /* Completely hide anchor links in headings */
     .stMarkdown h1 a,
     .stMarkdown h2 a,
     .stMarkdown h3 a,
@@ -114,9 +114,11 @@ def main():
     .stMarkdown h5 a,
     .stMarkdown h6 a {
         display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 
-    /* Remove link styling from headings */
+    /* Remove all link styling and behavior from headings */
     .stMarkdown h1,
     .stMarkdown h2,
     .stMarkdown h3,
@@ -126,17 +128,41 @@ def main():
         text-decoration: none !important;
         color: inherit !important;
         cursor: default !important;
+        pointer-events: auto !important;
     }
 
-    /* Hide the link icon that appears on hover */
-    .stMarkdown .anchor-link {
+    /* Hide all types of anchor elements */
+    .stMarkdown .anchor-link,
+    .stMarkdown .anchor-link-text {
         display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Target specific Streamlit header containers */
+    div[data-testid="stMarkdownContainer"] h1 a,
+    div[data-testid="stMarkdownContainer"] h2 a,
+    div[data-testid="stMarkdownContainer"] h3 a {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Override any header link behavior */
+    .element-container h1,
+    .element-container h2,
+    .element-container h3 {
+        position: relative;
+    }
+    
+    .element-container h1:hover,
+    .element-container h2:hover,
+    .element-container h3:hover {
+        cursor: default !important;
     }
     </style>
     """)
 
     # Header
-    st.title("🤖 AI Document Analyzer & Chat")
+    st.markdown("<h1 style='margin-bottom: 1rem; color: inherit; text-decoration: none;'>🤖 AI Document Analyzer & Chat</h1>", unsafe_allow_html=True)
     st.markdown("""
     Upload documents (PDF, Word, Text) and chat with them using AI. Get insights, summaries, 
     and answers from your documents with different AI expert personalities.
@@ -259,7 +285,7 @@ def main():
     
     with col1:
         # Chat interface
-        st.subheader("💬 Chat with Your Documents")
+        st.markdown("<h3 style='margin-bottom: 1rem; color: inherit; text-decoration: none;'>💬 Chat with Your Documents</h3>", unsafe_allow_html=True)
         
         # Display chat history
         chat_container = st.container()
@@ -289,7 +315,7 @@ def main():
     
     with col2:
         # Document insights and quick actions
-        st.subheader("📊 Document Insights")
+        st.markdown("<h3 style='margin-bottom: 1rem; color: inherit; text-decoration: none;'>📊 Document Insights</h3>", unsafe_allow_html=True)
         
         if st.session_state.documents:
             # Quick statistics
