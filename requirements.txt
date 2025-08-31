@@ -11,3 +11,5 @@ python-levenshtein>=0.21.0
 docx
 fuzzywuzzy
 python-levenshtein
+google-genai
+google-generativeai

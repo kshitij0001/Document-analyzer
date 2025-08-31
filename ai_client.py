@@ -18,6 +18,7 @@ class AIClient:
         """Initialize the AI client with API key from Streamlit secrets"""
         # Get API keys from Streamlit secrets or environment
         self.openrouter_api_key = None
+        self.gemini_api_key = None
         
         try:
             # Try nested format first (user's format)
@@ -30,9 +31,26 @@ class AIClient:
                 # Fallback to environment variables (Replit secrets)
                 import os
                 self.openrouter_api_key = os.getenv('OPENROUTER_API_KEY')
+
+        # Check for Gemini API key
+        try:
+            self.gemini_api_key = st.secrets.get('GEMINI_API_KEY') or st.secrets.get('GOOGLE_API_KEY')
+        except:
+            import os
+            self.gemini_api_key = os.getenv('GEMINI_API_KEY') or os.getenv('GOOGLE_API_KEY')
         
-        # Configure based on OpenRouter API key only
-        if self.openrouter_api_key:
+        # Configure based on available API keys
+        if self.gemini_api_key:
+            # Use direct Gemini API (user's preferred option)
+            self.provider = "Google Gemini"
+            self.api_key = self.gemini_api_key
+            self.base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+            self.available_models = {
+                "gemini-1.5-flash": "gemini-1.5-flash-latest",
+                "gemini-1.5-pro": "gemini-1.5-pro-latest"
+            }
+            self.current_model = "gemini-1.5-flash-latest"
+        elif self.openrouter_api_key:
             # Use OpenRouter - FREE MODELS ONLY
             self.provider = "OpenRouter"
             self.api_key = self.openrouter_api_key
@@ -386,7 +404,7 @@ Please answer the question based on the document content above."""
         temperature: float = 0.7
     ) -> Dict[str, any]:
         """
-        Make request to OpenRouter API.
+        Make request to AI API (OpenRouter or Direct Gemini).
         
         Args:
             messages (List[Dict]): Chat messages
@@ -402,10 +420,85 @@ Please answer the question based on the document content above."""
                 return {
                     "success": False,
                     "content": "",
-                    "error": "🔑 Please configure an API key in .streamlit/secrets.toml:\nOPENROUTER_API_KEY = \"your-key-here\"\nor\nOPENAI_API_KEY = \"your-key-here\"",
+                    "error": "🔑 Please configure an API key in .streamlit/secrets.toml:\nGEMINI_API_KEY = \"your-key-here\"\nor\nOPENROUTER_API_KEY = \"your-key-here\"",
                     "usage": {}
                 }
             
+            # Handle different providers
+            if self.provider == "Google Gemini":
+                return self._make_gemini_request(messages, max_tokens, temperature)
+            else:
+                return self._make_openrouter_request(messages, max_tokens, temperature)
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "content": "",
+                "error": f"Unexpected error: {str(e)}",
+                "usage": {}
+            }
+    
+    def _make_gemini_request(self, messages: List[Dict], max_tokens: int, temperature: float) -> Dict[str, any]:
+        """Make request to Google Gemini API"""
+        try:
+            import google.generativeai as genai
+            
+            # Configure API key
+            genai.configure(api_key=self.api_key)
+            
+            # Create model
+            model = genai.GenerativeModel(self.current_model)
+            
+            # Convert messages to Gemini format
+            # Combine system and user messages into a single prompt for Gemini
+            prompt_parts = []
+            
+            for msg in messages:
+                if msg["role"] == "system":
+                    prompt_parts.append(f"System Instructions: {msg['content']}\n\n")
+                elif msg["role"] == "user":
+                    prompt_parts.append(f"User: {msg['content']}")
+                elif msg["role"] == "assistant":
+                    prompt_parts.append(f"Assistant: {msg['content']}")
+            
+            full_prompt = "\n".join(prompt_parts)
+            
+            # Generate response
+            response = model.generate_content(
+                full_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=max_tokens,
+                    temperature=temperature
+                )
+            )
+            
+            if response.text:
+                return {
+                    "success": True,
+                    "content": response.text,
+                    "error": None,
+                    "usage": {"total_tokens": len(response.text.split())},  # Rough estimate
+                    "model": self.current_model
+                }
+            else:
+                return {
+                    "success": False,
+                    "content": "",
+                    "error": "No response content received from Gemini",
+                    "usage": {}
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "content": "",
+                "error": f"Gemini API error: {str(e)}",
+                "usage": {}
+            }
+    
+    def _make_openrouter_request(self, messages: List[Dict], max_tokens: int, temperature: float) -> Dict[str, any]:
+        """Make request to OpenRouter API"""
+        try:
             # Prepare request data
             data = {
                 "model": self.current_model,
@@ -418,13 +511,10 @@ Please answer the question based on the document content above."""
             # Prepare headers with API key
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
+                "Authorization": f"Bearer {self.api_key}",
+                "HTTP-Referer": "https://document-analyzer.streamlit.app",
+                "X-Title": "AI Document Analyzer"
             }
-            
-            # Add OpenRouter specific headers if using OpenRouter
-            if self.provider == "OpenRouter":
-                headers["HTTP-Referer"] = "https://document-analyzer.streamlit.app"
-                headers["X-Title"] = "AI Document Analyzer"
             
             response = requests.post(
                 self.base_url,
