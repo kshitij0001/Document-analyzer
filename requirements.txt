@@ -32,3 +32,4 @@ scipy
 streamlit
 plotly
 streamlit
+plotly

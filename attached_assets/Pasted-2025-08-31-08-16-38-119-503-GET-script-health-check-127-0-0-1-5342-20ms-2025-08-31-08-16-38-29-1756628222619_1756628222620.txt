@@ -1,0 +1,109 @@
+2025-08-31 08:16:38.119 503 GET /script-health-check (127.0.0.1) 5342.20ms
+
+2025-08-31 08:16:38.291 Uncaught app execution
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+
+    result = func()
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+
+    exec(code, module.__dict__)  # noqa: S102
+
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 13, in <module>
+
+    import plotly.graph_objects as go
+
+ModuleNotFoundError: No module named 'plotly'
+
+2025-08-31 08:16:38.774 503 GET /script-health-check (127.0.0.1) 498.64ms
+
+2025-08-31 08:16:42.061 Uncaught app execution
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+
+    result = func()
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+
+    exec(code, module.__dict__)  # noqa: S102
+
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 13, in <module>
+
+    import plotly.graph_objects as go
+
+ModuleNotFoundError: No module named 'plotly'
+
+2025-08-31 08:16:42.782 Uncaught app execution
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+
+    result = func()
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+
+    exec(code, module.__dict__)  # noqa: S102
+
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 13, in <module>
+
+    import plotly.graph_objects as go
+
+ModuleNotFoundError: No module named 'plotly'
+
+2025-08-31 08:16:43.229 503 GET /script-health-check (127.0.0.1) 449.25ms
+
+2025-08-31 08:16:47.812 Uncaught app execution
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+
+    result = func()
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+
+    exec(code, module.__dict__)  # noqa: S102
+
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 13, in <module>
+
+    import plotly.graph_objects as go
+
+ModuleNotFoundError: No module named 'plotly'
+
+2025-08-31 08:16:48.284 503 GET /script-health-check (127.0.0.1) 474.34ms
+
+2025-08-31 08:16:52.799 Uncaught app execution
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+
+    result = func()
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+
+    exec(code, module.__dict__)  # noqa: S102
+
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 13, in <module>
+
+    import plotly.graph_objects as go
+
+ModuleNotFoundError: No module named 'plotly'
+
+2025-08-31 08:16:53.267 503 GET /script-health-check (127.0.0.1) 469.26ms
