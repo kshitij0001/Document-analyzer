@@ -578,6 +578,75 @@ def get_pastel_colors():
         '#FFECB3'   # Light amber
     ]
 
+def create_themes_from_text(text_response):
+    """Extract themes from text response when JSON parsing fails"""
+    try:
+        # Simple extraction based on common patterns
+        lines = text_response.strip().split('\n')
+        themes = []
+        current_theme = None
+        theme_id = 0
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Look for theme indicators (bold text, numbered items, bullet points)
+            if any(indicator in line.lower() for indicator in ['theme', 'topic', 'section', 'main', 'key']):
+                if current_theme:
+                    themes.append(current_theme)
+                
+                theme_id += 1
+                current_theme = {
+                    'id': f'theme_{theme_id}',
+                    'name': line.replace('*', '').replace('#', '').strip()[:50],
+                    'summary': f'Key theme extracted from document analysis',
+                    'sub_themes': []
+                }
+            elif line.startswith(('-', '*', '•', '◦')) or line[0].isdigit():
+                # This looks like a sub-point
+                if current_theme:
+                    sub_theme = {
+                        'id': f'sub_theme_{theme_id}_{len(current_theme["sub_themes"])}',
+                        'name': line.lstrip('- *•◦0123456789. ').strip()[:50],
+                        'summary': 'Sub-theme from document analysis',
+                        'sub_themes': []
+                    }
+                    current_theme['sub_themes'].append(sub_theme)
+        
+        # Add the last theme
+        if current_theme:
+            themes.append(current_theme)
+        
+        # If no structured themes found, create some basic ones
+        if not themes:
+            # Extract first few sentences as themes
+            sentences = text_response.split('.')[:5]
+            for i, sentence in enumerate(sentences):
+                if sentence.strip():
+                    themes.append({
+                        'id': f'auto_theme_{i}',
+                        'name': sentence.strip()[:50] + "...",
+                        'summary': 'Automatically extracted theme',
+                        'sub_themes': []
+                    })
+        
+        return {
+            'title': 'Document Analysis (Text Fallback)',
+            'themes': themes
+        }
+    except:
+        return {
+            'title': 'Document Analysis',
+            'themes': [{
+                'id': 'fallback_theme',
+                'name': 'Document Content',
+                'summary': 'Content analysis available - click to explore in chat',
+                'sub_themes': []
+            }]
+        }
+
 def parse_mind_map_data(mind_map_data):
     """Parse AI response into structured mind map data"""
     try:
