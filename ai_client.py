@@ -353,7 +353,7 @@ Please answer the question based on the document content above."""
                 "key_points": "Extract and list the key points, findings, or conclusions from this document in a clear, organized format.",
                 "sentiment": "Analyze the tone and sentiment of this document. Consider the emotional undertones and overall attitude.",
                 "themes": "Identify the main themes, topics, and recurring concepts discussed in this document.",
-                "mind_map": "IMPORTANT: Return ONLY valid JSON in this exact format. Do not include any additional text, explanations, or markdown. Create a comprehensive hierarchical mind map structure: {\"title\": \"Document Title\", \"themes\": [{\"name\": \"Main Theme Name\", \"id\": \"theme_1\", \"summary\": \"Brief 1-2 sentence description\", \"sub_themes\": [{\"name\": \"Sub-theme Name\", \"id\": \"sub_1_1\", \"summary\": \"Description\", \"sub_themes\": []}]}]}. Extract 3-7 main themes from the document. Each theme must have: name (clear title), id (unique like theme_1, theme_2), summary (1-2 sentences), sub_themes (array of sub-topics). Create 2-4 levels of nesting based on content complexity. Focus on the most important concepts, methodologies, findings, and conclusions from the document."
+                "mind_map": "Create a comprehensive mind map analysis of this document. Structure your response as a valid JSON object with this exact format:\n\n{\n  \"title\": \"[Document Title]\",\n  \"themes\": [\n    {\n      \"name\": \"[Main Theme Name]\",\n      \"id\": \"theme_1\",\n      \"summary\": \"[1-2 sentence description]\",\n      \"sub_themes\": [\n        {\n          \"name\": \"[Sub-theme Name]\",\n          \"id\": \"sub_1_1\",\n          \"summary\": \"[Description]\",\n          \"sub_themes\": []\n        }\n      ]\n    }\n  ]\n}\n\nExtract 3-7 main themes from the document. Each theme must have a clear name, unique id, brief summary, and sub_themes array. Create 2-3 levels of nesting. Focus on key concepts, methodologies, findings, and conclusions. Return ONLY the JSON - no additional text or explanations."
             }
             
             prompt = analysis_prompts.get(analysis_type, analysis_prompts["summary"])
@@ -439,6 +439,18 @@ Please answer the question based on the document content above."""
                 
                 if "choices" in result and len(result["choices"]) > 0:
                     content = result["choices"][0]["message"]["content"]
+                    
+                    # Ensure content is not None or empty string
+                    if content is None:
+                        content = ""
+                    
+                    # Debug logging for mind map issues
+                    if hasattr(st.session_state, 'mindmap_debug_info'):
+                        st.session_state.mindmap_debug_info.append(f"Raw API content length: {len(content)} chars")
+                        if len(content) > 0:
+                            st.session_state.mindmap_debug_info.append(f"Content preview: {content[:200]}...")
+                        else:
+                            st.session_state.mindmap_debug_info.append("WARNING: Empty content received from API")
                     
                     return {
                         "success": True,

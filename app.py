@@ -695,15 +695,37 @@ def create_themes_from_text_with_debug(text_response):
         if not themes:
             with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
                 st.warning("No structured themes found, extracting from sentences")
-                # Extract first few sentences as themes
-                sentences = text_response.split('.')[:5]
-                st.write(f"Extracting themes from {len([s for s in sentences if s.strip()])} sentences")
-            for i, sentence in enumerate(sentences):
-                if sentence.strip():
+                
+            # Try multiple extraction strategies
+            
+            # Strategy 1: Extract sentences as themes
+            sentences = [s.strip() for s in text_response.split('.') if s.strip() and len(s.strip()) > 10]
+            
+            # Strategy 2: Extract lines that look like headings or important points
+            lines = [line.strip() for line in text_response.split('\n') if line.strip() and len(line.strip()) > 5]
+            meaningful_lines = []
+            for line in lines:
+                # Look for lines that seem important (capitalized, numbered, have keywords)
+                if (line[0].isupper() or 
+                    any(word in line.lower() for word in ['analysis', 'finding', 'conclusion', 'result', 'key', 'main', 'important']) or
+                    line.startswith(tuple('123456789')) or
+                    line.startswith('-') or line.startswith('*')):
+                    meaningful_lines.append(line)
+            
+            # Use meaningful lines first, then sentences
+            content_sources = meaningful_lines if meaningful_lines else sentences[:5]
+            
+            with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
+                st.write(f"Found {len(meaningful_lines)} meaningful lines, {len(sentences)} sentences")
+                st.write(f"Using {len(content_sources)} content sources for themes")
+                
+            for i, content in enumerate(content_sources[:7]):  # Max 7 themes
+                if content and len(content.strip()) > 3:
+                    clean_content = content.replace('*', '').replace('#', '').replace('-', '').strip()
                     themes.append({
-                        'id': f'auto_theme_{i}',
-                        'name': sentence.strip()[:50] + "...",
-                        'summary': 'Automatically extracted theme',
+                        'id': f'auto_theme_{i+1}',
+                        'name': clean_content[:60] + ("..." if len(clean_content) > 60 else ""),
+                        'summary': 'Theme extracted from document content',
                         'sub_themes': []
                     })
         
@@ -770,6 +792,10 @@ def parse_mind_map_data(mind_map_data):
                     # Fix single quotes to double quotes
                     json_text = re.sub(r"'([^']*)':", r'"\1":', json_text)  # Fix property names
                     json_text = re.sub(r":\s*'([^']*)'", r': "\1"', json_text)  # Fix string values
+                    
+                    # Remove any markdown code blocks
+                    json_text = re.sub(r'```json\s*', '', json_text)
+                    json_text = re.sub(r'```\s*$', '', json_text)
                     
                     # Fix trailing commas
                     json_text = re.sub(r',\s*}', '}', json_text)  # Remove trailing commas before }
@@ -1224,9 +1250,25 @@ def generate_mind_map():
         # Create visualization
         fig = create_mind_map_visualization(cached_result["content"])
         if fig:
-            # Display the mind map
+            # Display the mind map with proper Streamlit configuration
             if PLOTLY_AVAILABLE:
-                clicked_data = st.plotly_chart(fig, use_container_width=True, key="mindmap_chart")
+                # Configure plotly chart with Streamlit best practices
+                config = {
+                    'displayModeBar': True,
+                    'displaylogo': False,
+                    'modeBarButtonsToRemove': ['pan2d', 'lasso2d', 'select2d', 'resetScale2d'],
+                    'scrollZoom': False,  # Prevent conflicts with page scrolling
+                    'doubleClick': 'reset',
+                    'showTips': True
+                }
+                
+                clicked_data = st.plotly_chart(
+                    fig, 
+                    use_container_width=True, 
+                    key="mindmap_chart",
+                    config=config,
+                    theme="streamlit"  # Use Streamlit theme
+                )
             else:
                 st.markdown(fig)  # Display text-based mind map
             
