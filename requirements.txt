@@ -21,3 +21,14 @@ scikit-learn
 scipy
 streamlit
 plotly
+numpy
+openai
+plotly
+PyPDF2
+python-docx
+requests
+scikit-learn
+scipy
+streamlit
+plotly
+streamlit

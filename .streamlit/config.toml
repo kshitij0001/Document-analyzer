@@ -1,30 +1,7 @@
-# Custom CSS to hide automatic heading links
+[server]
+headless = true
+address = "0.0.0.0"
+port = 5000
+
 [theme.custom]
-css = """
-/* Hide the automatic anchor links that Streamlit generates for headings */
-.stMarkdown h1 a,
-.stMarkdown h2 a,
-.stMarkdown h3 a,
-.stMarkdown h4 a,
-.stMarkdown h5 a,
-.stMarkdown h6 a {
-    display: none !important;
-}
-
-/* Remove link styling from headings */
-.stMarkdown h1,
-.stMarkdown h2,
-.stMarkdown h3,
-.stMarkdown h4,
-.stMarkdown h5,
-.stMarkdown h6 {
-    text-decoration: none !important;
-    color: inherit !important;
-    cursor: default !important;
-}
-
-/* Hide the link icon that appears on hover */
-.stMarkdown .anchor-link {
-    display: none !important;
-}
-"""
+css = "/* Hide the automatic anchor links that Streamlit generates for headings */\n.stMarkdown h1 a,\n.stMarkdown h2 a,\n.stMarkdown h3 a,\n.stMarkdown h4 a,\n.stMarkdown h5 a,\n.stMarkdown h6 a {\n    display: none !important;\n}\n\n/* Remove link styling from headings */\n.stMarkdown h1,\n.stMarkdown h2,\n.stMarkdown h3,\n.stMarkdown h4,\n.stMarkdown h5,\n.stMarkdown h6 {\n    text-decoration: none !important;\n    color: inherit !important;\n    cursor: default !important;\n}\n\n/* Hide the link icon that appears on hover */\n.stMarkdown .anchor-link {\n    display: none !important;\n}\n"
