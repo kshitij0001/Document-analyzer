@@ -10,8 +10,15 @@ import hashlib
 from document_processor import DocumentProcessor
 from vector_store import VectorStore
 from ai_client import AIClient
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+# Optional plotly imports for mind map visualization
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    go = None
+    make_subplots = None
 
 # Helper functions for caching
 def load_cached_analyses():
@@ -684,8 +691,53 @@ def calculate_node_positions(nodes, edges):
     
     return positions
 
+def create_text_mind_map(mind_map_data):
+    """Create text-based mind map when plotly is not available"""
+    try:
+        # Parse the mind map data
+        parsed_data = parse_mind_map_data(mind_map_data)
+        title = parsed_data.get('title', 'Document Analysis')
+        themes = parsed_data.get('themes', [])
+        
+        if not themes:
+            return "No themes found in the mind map data"
+        
+        # Create text-based mind map
+        text_output = f"# 🧠 {title}\n\n"
+        
+        def format_theme_text(theme_list, level=0):
+            result = ""
+            indent = "  " * level
+            bullet = "•" if level == 0 else ("◦" if level == 1 else "-")
+            
+            for theme in theme_list:
+                name = theme.get('name', 'Unnamed Theme')
+                summary = theme.get('summary', '')
+                result += f"{indent}{bullet} **{name}**"
+                if summary:
+                    result += f": {summary}"
+                result += "\n"
+                
+                # Add sub-themes recursively
+                if theme.get('sub_themes'):
+                    result += format_theme_text(theme['sub_themes'], level + 1)
+            
+            return result
+        
+        text_output += format_theme_text(themes)
+        text_output += "\n\n💡 *Interactive visualization requires plotly package. Text version shown above.*"
+        
+        return text_output
+        
+    except Exception as e:
+        return f"Error creating text mind map: {str(e)}"
+
 def create_mind_map_visualization(mind_map_data):
     """Create advanced interactive mind map with unlimited depth"""
+    # Check if plotly is available
+    if not PLOTLY_AVAILABLE:
+        return create_text_mind_map(mind_map_data)
+    
     try:
         # Parse the mind map data
         parsed_data = parse_mind_map_data(mind_map_data)
@@ -912,7 +964,10 @@ def generate_mind_map():
         fig = create_mind_map_visualization(cached_result["content"])
         if fig:
             # Display the mind map
-            clicked_data = st.plotly_chart(fig, use_container_width=True, key="mindmap_chart")
+            if PLOTLY_AVAILABLE:
+                clicked_data = st.plotly_chart(fig, use_container_width=True, key="mindmap_chart")
+            else:
+                st.markdown(fig)  # Display text-based mind map
             
             # Instructions
             st.info("💡 **How to use:** Click on nodes to expand themes or click leaf nodes (end topics) to generate detailed notes in the chat!")
@@ -983,7 +1038,10 @@ def generate_fresh_mind_map():
                 fig = create_mind_map_visualization(response["content"])
                 if fig:
                     # Display the mind map
-                    st.plotly_chart(fig, use_container_width=True, key="fresh_mindmap_chart")
+                    if PLOTLY_AVAILABLE:
+                        st.plotly_chart(fig, use_container_width=True, key="fresh_mindmap_chart")
+                    else:
+                        st.markdown(fig)  # Display text-based mind map
                     
                     # Instructions
                     st.info("💡 **How to use:** Use the expansion controls below to explore different levels of detail!")
