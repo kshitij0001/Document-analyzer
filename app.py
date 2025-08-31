@@ -1297,7 +1297,7 @@ if st.session_state.documents:
                 results = st.session_state.vector_store.search(user_question)
                 
                 if results:
-                    context = "\n\n".join([result["content"] for result in results[:3]])
+                    context = "\n\n".join([result["chunk"]["text"] for result in results[:3]])
                 else:
                     # Fallback: use first chunk of each document
                     context_parts = []
