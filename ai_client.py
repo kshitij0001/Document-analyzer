@@ -441,7 +441,34 @@ Please answer the question based on the document content above."""
     def _make_gemini_request(self, messages: List[Dict], max_tokens: int, temperature: float) -> Dict[str, any]:
         """Make request to Google Gemini API"""
         try:
-            import google.generativeai as genai
+            # Add debugging info for import issues
+            import sys
+            import os
+            
+            # Check Python environment details
+            python_path = sys.executable
+            python_version = sys.version
+            current_path = sys.path[:3]  # First 3 paths
+            
+            try:
+                import google.generativeai as genai
+            except ImportError as import_error:
+                debug_info = f"""
+🔍 **Import Debug Information:**
+- Python Path: {python_path}
+- Python Version: {python_version}
+- Current Working Directory: {os.getcwd()}
+- First 3 sys.path entries: {current_path}
+- Import Error: {str(import_error)}
+
+Try running: uv add google-generativeai
+                """
+                return {
+                    "success": False,
+                    "content": "",
+                    "error": f"Google Generative AI import failed.\n{debug_info}",
+                    "usage": {}
+                }
             
             # Configure API key
             genai.configure(api_key=self.api_key)
