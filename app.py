@@ -120,7 +120,7 @@ def main():
     .stMarkdown h1,
     .stMarkdown h2,
     .stMarkdown h3,
-    .stMarkdown h4 a,
+    .stMarkdown h4,
     .stMarkdown h5,
     .stMarkdown h6 {
         text-decoration: none !important;
