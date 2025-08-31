@@ -1,0 +1,109 @@
+  File "/mount/src/document-analyzer/app.py", line 13, in <module>
+
+    import plotly.graph_objects as go
+
+ModuleNotFoundError: No module named 'plotly'
+
+[08:23:17] 📦 Processing dependencies...
+
+[08:23:17] 📦 Processed dependencies!
+
+[08:23:20] 🔄 Updated app!
+
+[08:30:04] 🐙 Pulling code changes from Github...
+
+[08:30:04] 📦 Processing dependencies...
+
+[08:30:04] 📦 Processed dependencies!
+
+2025-08-31 08:30:04.559 Uncaught app execution
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+
+    result = func()
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+
+    exec(code, module.__dict__)  # noqa: S102
+
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 10, in <module>
+
+    from document_processor import DocumentProcessor
+
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+
+  File "<frozen importlib._bootstrap>", line 946, in _load_unlocked
+
+KeyError: 'document_processor'
+
+[08:30:05] 🔄 Updated app!
+
+[08:30:17] 🐙 Pulling code changes from Github...
+
+[08:30:18] 📦 Processing dependencies...
+
+[08:30:18] 📦 Processed dependencies!
+
+[08:30:19] 🔄 Updated app!
+
+[08:46:09] 🐙 Pulling code changes from Github...
+
+[08:46:09] 📦 Processing dependencies...
+
+[08:46:09] 📦 Processed dependencies!
+
+[08:46:11] 🔄 Updated app!
+
+[08:51:34] 🐙 Pulling code changes from Github...
+
+[08:51:35] 📦 Processing dependencies...
+
+[08:51:35] 📦 Processed dependencies!
+
+[08:51:36] 🔄 Updated app!
+
+[08:55:40] 🐙 Pulling code changes from Github...
+
+[08:55:40] 📦 Processing dependencies...
+
+[08:55:40] 📦 Processed dependencies!
+
+[08:55:42] 🔄 Updated app!
+
+[09:17:37] 🐙 Pulling code changes from Github...
+
+[09:17:38] 📦 Processing dependencies...
+
+[09:17:38] 📦 Processed dependencies!
+
+[09:17:40] 🔄 Updated app!
+
+[09:20:53] 🐙 Pulling code changes from Github...
+
+[09:20:54] 📦 Processing dependencies...
+
+[09:20:54] 📦 Processed dependencies!
+
+[09:20:55] 🔄 Updated app!
+
+[10:42:03] 🐙 Pulling code changes from Github...
+
+[10:42:03] 📦 Processing dependencies...
+
+[10:42:03] 📦 Processed dependencies!
+
+[10:42:06] 🔄 Updated app!
+
+[10:42:34] 🐙 Pulling code changes from Github...
+
+[10:42:35] 📦 Processing dependencies...
+
+[10:42:35] 📦 Processed dependencies!
+
+[10:42:36] 🔄 Updated app!

@@ -51,3 +51,4 @@ requests
 scikit-learn
 scipy
 streamlit
+plotly

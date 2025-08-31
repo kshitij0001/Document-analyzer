@@ -15,17 +15,14 @@ try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     PLOTLY_AVAILABLE = True
-    print(f"✅ Plotly loaded successfully! Version: {go.__name__}")
 except ImportError as e:
     PLOTLY_AVAILABLE = False
     go = None
     make_subplots = None
-    print(f"❌ Plotly import failed: {e}")
 except Exception as e:
     PLOTLY_AVAILABLE = False
     go = None
     make_subplots = None
-    print(f"❌ Plotly import error: {e}")
 
 # Helper functions for caching
 def load_cached_analyses():
@@ -117,6 +114,13 @@ if "mindmap_visible_levels" not in st.session_state:
     st.session_state.mindmap_visible_levels = 2
 if "mindmap_debug_info" not in st.session_state:
     st.session_state.mindmap_debug_info = []
+if "global_debug_info" not in st.session_state:
+    st.session_state.global_debug_info = []
+
+def add_debug_info(message):
+    """Add debug information to global debug log"""
+    if 'global_debug_info' in st.session_state:
+        st.session_state.global_debug_info.append(message)
 
 def main():
     # Hide heading links with enhanced CSS
@@ -299,8 +303,8 @@ def main():
     # Main content area
     col1, col2 = st.columns([2, 1])
     
-    # Show debug panel if there's debug info
-    show_mindmap_debug_panel()
+    # Show global debug panel
+    show_global_debug_panel()
     
     with col1:
         # Chat interface
@@ -590,65 +594,91 @@ def get_pastel_colors():
         '#FFECB3'   # Light amber
     ]
 
-def show_mindmap_debug_panel():
-    """Display consolidated debug information in a corner panel"""
-    if 'mindmap_debug_info' in st.session_state and st.session_state.mindmap_debug_info:
-        # Create a sidebar or corner element for debug info
-        debug_info = st.session_state.mindmap_debug_info
+def show_global_debug_panel():
+    """Display global debug panel in bottom left corner"""
+    
+    # CSS for bottom-left debug button and panel
+    st.html("""
+    <style>
+    .debug-button {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: #FF6B6B;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 18px;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+    .debug-button:hover {
+        background: #FF5252;
+        transform: scale(1.05);
+    }
+    </style>
+    """)
+    
+    # Create debug info container in sidebar
+    with st.sidebar:
+        if st.button("🐛", help="Debug Information", key="debug_toggle"):
+            st.session_state.show_debug_panel = not st.session_state.get('show_debug_panel', False)
         
-        # Use CSS to position this as a small corner panel
-        st.html("""
-        <style>
-        .debug-panel {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 300px;
-            background: rgba(240, 242, 246, 0.95);
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 12px;
-            z-index: 1000;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .debug-toggle {
-            cursor: pointer;
-            background: #ff6b6b;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
-        </style>
-        """)
-        
-        with st.expander("🐛 Debug Information", expanded=False):
-            st.caption("Mind Map Generation Debug Log")
-            for item in debug_info[-20:]:  # Show last 20 debug items
-                if item.startswith("**"):
-                    st.write(f"### {item}")
-                elif "❌" in item or "ERROR" in item.upper():
-                    st.error(item)
-                elif "✅" in item or "SUCCESS" in item.upper():
-                    st.success(item)
-                elif "⚠️" in item or "WARNING" in item.upper():
-                    st.warning(item)
+        if st.session_state.get('show_debug_panel', False):
+            with st.expander("🔧 Global Debug Information", expanded=True):
+                
+                # Combine all debug info
+                all_debug = []
+                if 'mindmap_debug_info' in st.session_state:
+                    all_debug.extend(st.session_state.mindmap_debug_info)
+                if 'global_debug_info' in st.session_state:
+                    all_debug.extend(st.session_state.global_debug_info)
+                
+                if all_debug:
+                    st.caption(f"Debug Log ({len(all_debug)} entries)")
+                    
+                    # Show recent debug items
+                    for item in all_debug[-30:]:  # Show last 30 debug items
+                        if item.startswith("**"):
+                            st.write(f"### {item}")
+                        elif "❌" in item or "ERROR" in item.upper():
+                            st.error(item)
+                        elif "✅" in item or "SUCCESS" in item.upper():
+                            st.success(item)
+                        elif "⚠️" in item or "WARNING" in item.upper():
+                            st.warning(item)
+                        else:
+                            st.write(f"- {item}")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Clear Debug", key="clear_debug"):
+                            st.session_state.mindmap_debug_info = []
+                            st.session_state.global_debug_info = []
+                            st.rerun()
+                    with col2:
+                        if st.button("Export Debug", key="export_debug"):
+                            debug_text = "\n".join(all_debug)
+                            st.download_button(
+                                "Download Debug Log",
+                                debug_text,
+                                "debug_log.txt",
+                                "text/plain"
+                            )
                 else:
-                    st.write(f"- {item}")
-            
-            if st.button("Clear Debug Log", key="clear_debug"):
-                st.session_state.mindmap_debug_info = []
-                st.rerun()
+                    st.info("No debug information available")
 
 def create_themes_from_text_with_debug(text_response):
     """Extract themes from text response when JSON parsing fails - with debugging"""
     
     try:
-        # Debug information in collapsible section
-        with st.expander("📝 **Debug Info** - Text-Based Theme Extraction", expanded=False):
-            st.write("**Method:** Extracting themes from text patterns")
+        # Add to global debug info  
+        add_debug_info("**Text Extraction:** Starting text-based theme extraction")
+        add_debug_info("Method: Extracting themes from text patterns")
         
         # Simple extraction based on common patterns
         lines = text_response.strip().split('\n')
@@ -767,15 +797,12 @@ def parse_mind_map_data(mind_map_data):
     """Parse AI response into structured mind map data with optional debugging"""
     
     try:
-        # Debug information in collapsible section
-        with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
-            st.write("**Step 1:** Analyzing AI Response")
-            st.write(f"Response type: {type(mind_map_data)}")
-            st.write(f"Response length: {len(str(mind_map_data))} characters")
-            
-            # Show first 500 characters of response
-            preview = str(mind_map_data)[:500] + ("..." if len(str(mind_map_data)) > 500 else "")
-            st.code(preview, language="text")
+        # Add to global debug info
+        add_debug_info("**JSON Parsing Step 1:** Analyzing AI Response")
+        add_debug_info(f"Response type: {type(mind_map_data)}")
+        add_debug_info(f"Response length: {len(str(mind_map_data))} characters")
+        preview = str(mind_map_data)[:200] + ("..." if len(str(mind_map_data)) > 200 else "")
+        add_debug_info(f"Response preview: {preview}")
         
         if isinstance(mind_map_data, str):
             import re
