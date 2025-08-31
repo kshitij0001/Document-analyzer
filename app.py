@@ -421,7 +421,7 @@ def handle_user_question(question):
         response = st.session_state.ai_client.chat_with_document(
             user_question=question,
             document_context=context,
-            max_tokens=1000,
+            max_tokens=2500,
             temperature=0.7
         )
         
@@ -1184,7 +1184,7 @@ def generate_focused_notes(node_data):
         response = st.session_state.ai_client.chat_with_document(
             user_question=focused_question,
             document_context=context,
-            max_tokens=1200,
+            max_tokens=2500,
             temperature=0.7
         )
         
