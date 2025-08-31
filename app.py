@@ -108,6 +108,8 @@ if "mindmap_expanded_nodes" not in st.session_state:
     st.session_state.mindmap_expanded_nodes = set()
 if "mindmap_visible_levels" not in st.session_state:
     st.session_state.mindmap_visible_levels = 2
+if "mindmap_debug_info" not in st.session_state:
+    st.session_state.mindmap_debug_info = []
 
 def main():
     # Hide heading links with enhanced CSS
@@ -289,6 +291,9 @@ def main():
     
     # Main content area
     col1, col2 = st.columns([2, 1])
+    
+    # Show debug panel if there's debug info
+    show_mindmap_debug_panel()
     
     with col1:
         # Chat interface
@@ -578,6 +583,58 @@ def get_pastel_colors():
         '#FFECB3'   # Light amber
     ]
 
+def show_mindmap_debug_panel():
+    """Display consolidated debug information in a corner panel"""
+    if 'mindmap_debug_info' in st.session_state and st.session_state.mindmap_debug_info:
+        # Create a sidebar or corner element for debug info
+        debug_info = st.session_state.mindmap_debug_info
+        
+        # Use CSS to position this as a small corner panel
+        st.html("""
+        <style>
+        .debug-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 300px;
+            background: rgba(240, 242, 246, 0.95);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12px;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .debug-toggle {
+            cursor: pointer;
+            background: #ff6b6b;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        </style>
+        """)
+        
+        with st.expander("🐛 Debug Information", expanded=False):
+            st.caption("Mind Map Generation Debug Log")
+            for item in debug_info[-20:]:  # Show last 20 debug items
+                if item.startswith("**"):
+                    st.write(f"### {item}")
+                elif "❌" in item or "ERROR" in item.upper():
+                    st.error(item)
+                elif "✅" in item or "SUCCESS" in item.upper():
+                    st.success(item)
+                elif "⚠️" in item or "WARNING" in item.upper():
+                    st.warning(item)
+                else:
+                    st.write(f"- {item}")
+            
+            if st.button("Clear Debug Log", key="clear_debug"):
+                st.session_state.mindmap_debug_info = []
+                st.rerun()
+
 def create_themes_from_text_with_debug(text_response):
     """Extract themes from text response when JSON parsing fails - with debugging"""
     
@@ -707,10 +764,30 @@ def parse_mind_map_data(mind_map_data):
                         st.code(json_text[:300] + ("..." if len(json_text) > 300 else ""), language="json")
                         st.write("**Step 4:** Applying JSON fixes")
                     
-                    # Fix common JSON issues: convert single quotes to double quotes
+                    # Fix common JSON issues
                     original_json = json_text
+                    
+                    # Fix single quotes to double quotes
                     json_text = re.sub(r"'([^']*)':", r'"\1":', json_text)  # Fix property names
                     json_text = re.sub(r":\s*'([^']*)'", r': "\1"', json_text)  # Fix string values
+                    
+                    # Fix trailing commas
+                    json_text = re.sub(r',\s*}', '}', json_text)  # Remove trailing commas before }
+                    json_text = re.sub(r',\s*]', ']', json_text)  # Remove trailing commas before ]
+                    
+                    # Fix missing quotes around property names
+                    json_text = re.sub(r'(\w+):', r'"\1":', json_text)
+                    
+                    # Fix incomplete JSON structures
+                    open_braces = json_text.count('{')
+                    close_braces = json_text.count('}')
+                    if open_braces > close_braces:
+                        json_text += '}' * (open_braces - close_braces)
+                    
+                    open_brackets = json_text.count('[')
+                    close_brackets = json_text.count(']')
+                    if open_brackets > close_brackets:
+                        json_text += ']' * (open_brackets - close_brackets)
                     
                     with st.expander("🔧 **Debug Info** - JSON Parsing Details", expanded=False):
                         if original_json != json_text:
