@@ -15,10 +15,17 @@ try:
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
     PLOTLY_AVAILABLE = True
-except ImportError:
+    print(f"✅ Plotly loaded successfully! Version: {go.__name__}")
+except ImportError as e:
     PLOTLY_AVAILABLE = False
     go = None
     make_subplots = None
+    print(f"❌ Plotly import failed: {e}")
+except Exception as e:
+    PLOTLY_AVAILABLE = False
+    go = None
+    make_subplots = None
+    print(f"❌ Plotly import error: {e}")
 
 # Helper functions for caching
 def load_cached_analyses():
@@ -1023,6 +1030,7 @@ def create_mind_map_visualization(mind_map_data):
     """Create advanced interactive mind map with unlimited depth"""
     # Check if plotly is available
     if not PLOTLY_AVAILABLE:
+        st.warning(f"🔧 Plotly not available (PLOTLY_AVAILABLE={PLOTLY_AVAILABLE}). Using text fallback.")
         return create_text_mind_map(mind_map_data)
     
     try:
@@ -1058,7 +1066,11 @@ def create_mind_map_visualization(mind_map_data):
         positions = calculate_node_positions(nodes, edges)
         
         # Create Plotly figure
-        fig = go.Figure()
+        try:
+            fig = go.Figure()
+        except Exception as e:
+            st.error(f"Failed to create plotly figure: {e}")
+            return create_text_mind_map(mind_map_data)
         
         # Add edges (connections between nodes)
         for parent_id, child_id in edges:
@@ -1370,10 +1382,15 @@ def generate_fresh_mind_map():
             fig = create_mind_map_visualization(response["content"])
             
             if fig:
+                # Debug what type of object we got
+                st.write(f"🔧 Debug: fig type = {type(fig)}, PLOTLY_AVAILABLE = {PLOTLY_AVAILABLE}")
+                
                 # Display the mind map
-                if PLOTLY_AVAILABLE:
+                if PLOTLY_AVAILABLE and hasattr(fig, 'to_html'):
+                    st.success("🎯 Displaying interactive plotly mind map")
                     st.plotly_chart(fig, use_container_width=True, key="fresh_mindmap_chart")
                 else:
+                    st.info("📝 Displaying text-based mind map (plotly not available or fig is text)")
                     st.markdown(fig)  # Display text-based mind map
                 
                 # Instructions
