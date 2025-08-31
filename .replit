@@ -25,17 +25,20 @@ args = "AI Document Analyzer"
 name = "AI Document Analyzer"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "uv run streamlit run app.py"
 waitForPort = 5000
 
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[ports]]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 8501
+externalPort = 3000
+
 [agent]
-integrations = ["python_gemini==1.0.0"]

@@ -3,6 +3,7 @@
 # A NotebookLM-inspired document analysis tool with AI chat capabilities
 
 import streamlit as st
+import streamlit.components.v1
 import time
 import os
 import json
@@ -223,7 +224,7 @@ def display_mind_map_results(mind_map_data):
         </html>
         """
         
-        st.components.v1.html(mermaid_html, height=600, scrolling=True)
+        streamlit.components.v1.html(mermaid_html, height=600, scrolling=True)
         
         # Also provide code and download options
         with st.expander("🔧 View/Export Code"):
@@ -1256,6 +1257,10 @@ def create_mind_map_visualization(mind_map_data):
         positions = calculate_node_positions(nodes, edges)
         
         # Create Plotly figure
+        if not PLOTLY_AVAILABLE or go is None:
+            st.warning("Plotly not available, showing text version")
+            return create_text_mind_map(mind_map_data)
+        
         try:
             fig = go.Figure()
         except Exception as e:
