@@ -103,6 +103,38 @@ if "mindmap_visible_levels" not in st.session_state:
     st.session_state.mindmap_visible_levels = 2
 
 def main():
+    # Hide heading links with CSS
+    st.html("""
+    <style>
+    /* Hide the automatic anchor links that Streamlit generates for headings */
+    .stMarkdown h1 a,
+    .stMarkdown h2 a,
+    .stMarkdown h3 a,
+    .stMarkdown h4 a,
+    .stMarkdown h5 a,
+    .stMarkdown h6 a {
+        display: none !important;
+    }
+
+    /* Remove link styling from headings */
+    .stMarkdown h1,
+    .stMarkdown h2,
+    .stMarkdown h3,
+    .stMarkdown h4 a,
+    .stMarkdown h5,
+    .stMarkdown h6 {
+        text-decoration: none !important;
+        color: inherit !important;
+        cursor: default !important;
+    }
+
+    /* Hide the link icon that appears on hover */
+    .stMarkdown .anchor-link {
+        display: none !important;
+    }
+    </style>
+    """)
+
     # Header
     st.title("🤖 AI Document Analyzer & Chat")
     st.markdown("""
