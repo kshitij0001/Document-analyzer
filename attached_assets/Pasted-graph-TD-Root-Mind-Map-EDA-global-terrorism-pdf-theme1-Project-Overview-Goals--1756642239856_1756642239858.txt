@@ -1,0 +1,168 @@
+graph TD
+    Root["Mind Map: EDA global terrorism.pdf"]
+    theme1["Project Overview & Goals"]
+    Root --> theme1
+    theme1sub1["Problem Statement"]
+    theme1 --> theme1sub1
+    theme1sub1detail1["Specific Detail"]
+    theme1sub1 --> theme1sub1detail1
+    theme1sub1detail2["Specific Detail"]
+    theme1sub1 --> theme1sub1detail2
+    theme1sub1detail3["Key Finding"]
+    theme1sub1 --> theme1sub1detail3
+    theme1sub1detail4["Key Finding"]
+    theme1sub1 --> theme1sub1detail4
+    theme1sub2["Business Objectives"]
+    theme1 --> theme1sub2
+    theme1sub3["Key Impact Variables"]
+    theme1 --> theme1sub3
+    theme1sub3detail1["Specific Detail – Casualties C..."]
+    theme1sub3 --> theme1sub3detail1
+    theme1sub3detail2["Specific Detail – Core Impact ..."]
+    theme1sub3 --> theme1sub3detail2
+    theme1sub3detail3["Key Finding – Impact Variables..."]
+    theme1sub3 --> theme1sub3detail3
+    theme1sub4["Analytical Scope"]
+    theme1 --> theme1sub4
+    theme1sub4detail1["Global Scope of Trend Analysis"]
+    theme1sub4 --> theme1sub4detail1
+    theme1sub4detail2["Regional Hotspot Focus"]
+    theme1sub4 --> theme1sub4detail2
+    theme1sub4detail3["Organizational Deep‑Dive"]
+    theme1sub4 --> theme1sub4detail3
+    theme1sub4detail4["Multifaceted Analytical Approa..."]
+    theme1sub4 --> theme1sub4detail4
+    theme1sub5["Desired Outcomes"]
+    theme1 --> theme1sub5
+    theme1sub5detail1["High‑Risk Region Identificatio..."]
+    theme1sub5 --> theme1sub5detail1
+    theme1sub5detail2["Organizational Profiling Insig..."]
+    theme1sub5 --> theme1sub5detail2
+    theme1sub5detail3["Impact‑Metric Development"]
+    theme1sub5 --> theme1sub5detail3
+    theme1sub5detail4["Preventive Policy Guidance"]
+    theme1sub5 --> theme1sub5detail4
+    theme2["Data Preparation & Engineering"]
+    Root --> theme2
+    theme2sub1["Data Cleaning"]
+    theme2 --> theme2sub1
+    theme2sub2["Key Variable Identification"]
+    theme2 --> theme2sub2
+    theme2sub3["Feature Selection"]
+    theme2 --> theme2sub3
+    theme2sub3detail1["Core Feature Set Defined"]
+    theme2sub3 --> theme2sub3detail1
+    theme2sub3detail2["Composite “Casualties” Feature..."]
+    theme2sub3 --> theme2sub3detail2
+    theme2sub3detail3["Impact‑Oriented Feature Identi..."]
+    theme2sub3 --> theme2sub3detail3
+    theme2sub3detail4["Data‑Cleaning Prior to Selecti..."]
+    theme2sub3 --> theme2sub3detail4
+    theme2sub4["Casualties Feature Engineering"]
+    theme2 --> theme2sub4
+    theme2sub4detail1["Derived casualties column crea..."]
+    theme2sub4 --> theme2sub4detail1
+    theme2sub4detail2["Rationale for combining killed..."]
+    theme2sub4 --> theme2sub4detail2
+    theme2sub4detail3["Use of casualties as an impact..."]
+    theme2sub4 --> theme2sub4detail3
+    theme2sub4detail4["Facilitating aggregated visual..."]
+    theme2sub4 --> theme2sub4detail4
+    theme2sub5["Derived Impact Metrics"]
+    theme2 --> theme2sub5
+    theme2sub5detail1["Total Attack Count Variable"]
+    theme2sub5 --> theme2sub5detail1
+    theme2sub5detail2["Suicide‑Attack Flag"]
+    theme2sub5 --> theme2sub5detail2
+    theme2sub5detail3["Successful‑Attack Indicator"]
+    theme2sub5 --> theme2sub5detail3
+    theme2sub5detail4["Combined Casualties Metric"]
+    theme2sub5 --> theme2sub5detail4
+    theme3["Analytical Methods & Visualisa..."]
+    Root --> theme3
+    theme3sub1["Univariate Distribution Analys..."]
+    theme3 --> theme3sub1
+    theme3sub2["Bivariate Correlation Explorat..."]
+    theme3 --> theme3sub2
+    theme3sub2detail1["Year‑vs‑Attack‑Count Scatter P..."]
+    theme3sub2 --> theme3sub2detail1
+    theme3sub2detail2["Region‑vs‑Weapon‑Type Grouped ..."]
+    theme3sub2 --> theme3sub2detail2
+    theme3sub2detail3["Side‑by‑Side Line Plots of Sui..."]
+    theme3sub2 --> theme3sub2detail3
+    theme3sub3["Multivariate Pattern Modelling"]
+    theme3 --> theme3sub3
+    theme3sub4["Temporal Trend Visualisation"]
+    theme3 --> theme3sub4
+    theme3sub5["Geospatial Map Visualisation"]
+    theme3 --> theme3sub5
+    theme3sub5detail1["Choropleth map of worldwide at..."]
+    theme3sub5 --> theme3sub5detail1
+    theme3sub5detail2["Point‑based map of attack loca..."]
+    theme3sub5 --> theme3sub5detail2
+    theme3sub5detail3["Detection of high‑risk hotspot..."]
+    theme3sub5 --> theme3sub5detail3
+    theme3sub5detail4["Observed regional shift in att..."]
+    theme3sub5 --> theme3sub5detail4
+    theme4["Global Terror Trends"]
+    Root --> theme4
+    theme4sub1["21st‑Century Regional Surge"]
+    theme4 --> theme4sub1
+    theme4sub2["Dominant Weapon Modalities"]
+    theme4 --> theme4sub2
+    theme4sub2detail1["Bombings & Explosions Remain t..."]
+    theme4sub2 --> theme4sub2detail1
+    theme4sub2detail2["Firearms as the Second‑Most Co..."]
+    theme4sub2 --> theme4sub2detail2
+    theme4sub2detail3["Shift Toward Explosive Attacks..."]
+    theme4sub2 --> theme4sub2detail3
+    theme4sub2detail4["Gradual Decline of Firearm‑Cen..."]
+    theme4sub2 --> theme4sub2detail4
+    theme4sub3["Target Category Distribution"]
+    theme4 --> theme4sub3
+    theme4sub3detail1["Specific Detail"]
+    theme4sub3 --> theme4sub3detail1
+    theme4sub3detail2["Key Finding"]
+    theme4sub3 --> theme4sub3detail2
+    theme4sub3detail3["Specific Detail"]
+    theme4sub3 --> theme4sub3detail3
+    theme4sub3detail4["Key Finding"]
+    theme4sub3 --> theme4sub3detail4
+    theme4sub4["High‑Risk Nations Spotlight"]
+    theme4 --> theme4sub4
+    theme4sub4detail1["High‑Incident Nations Identifi..."]
+    theme4sub4 --> theme4sub4detail1
+    theme4sub4detail2["Significant Share of Global Te..."]
+    theme4sub4 --> theme4sub4detail2
+    theme4sub4detail3["Focus of Localized Analysis"]
+    theme4sub4 --> theme4sub4detail3
+    theme4sub5["Organizational Attack Profiles"]
+    theme4 --> theme4sub5
+    theme5["Regional & Group Focus"]
+    Root --> theme5
+    theme5sub1["Iraq Terror Activity"]
+    theme5 --> theme5sub1
+    theme5sub2["Afghanistan Terror Landscape"]
+    theme5 --> theme5sub2
+    theme5sub3["Pakistan Terror Dynamics"]
+    theme5 --> theme5sub3
+    theme5sub4["India Terror Incidents"]
+    theme5 --> theme5sub4
+    theme5sub5["Taliban Operational Patterns"]
+    theme5 --> theme5sub5
+    theme5sub6["ISIL Geographic Reach"]
+    theme5 --> theme5sub6
+    theme6["Insights & Recommendations"]
+    Root --> theme6
+    theme6sub1["Developing Country Vulnerabili..."]
+    theme6 --> theme6sub1
+    theme6sub2["Regional Surge Hotspots"]
+    theme6 --> theme6sub2
+    theme6sub3["Weapon Preference Trends"]
+    theme6 --> theme6sub3
+    theme6sub4["Civilian Target Prevalence"]
+    theme6 --> theme6sub4
+    theme6sub5["Data‑Driven Prevention Framewo..."]
+    theme6 --> theme6sub5
+    theme6sub6["Organizational Structure Insig..."]
+    theme6 --> theme6sub6

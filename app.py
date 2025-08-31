@@ -147,16 +147,54 @@ def display_mind_map_results(mind_map_data):
         )
     
     with tab3:
-        st.write("**Mermaid Diagram Code**")
+        st.write("**Interactive Mermaid Diagram**")
         mermaid_content = st.session_state.mindmap_generator.export_to_mermaid(mind_map_data)
-        st.code(mermaid_content, language="mermaid")
-        st.download_button(
-            "📊 Download Mermaid",
-            mermaid_content,
-            "mindmap.mmd",
-            "text/plain"
-        )
-        st.info("💡 Copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for an interactive diagram!")
+        
+        # Create interactive Mermaid diagram
+        mermaid_html = f"""
+        <div id="mermaidDiv" style="text-align: center; margin: 20px 0;">
+            <div class="mermaid">
+{mermaid_content}
+            </div>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+        <script>
+            mermaid.initialize({{
+                startOnLoad: true,
+                theme: 'default',
+                flowchart: {{
+                    useMaxWidth: true,
+                    htmlLabels: true,
+                    curve: 'basis'
+                }}
+            }});
+        </script>
+        
+        <style>
+            .mermaid {{
+                font-family: 'Arial', sans-serif;
+                font-size: 12px;
+            }}
+            .mermaid svg {{
+                max-width: 100%;
+                height: auto;
+            }}
+        </style>
+        """
+        
+        st.components.v1.html(mermaid_html, height=600, scrolling=True)
+        
+        # Also provide code and download options
+        with st.expander("🔧 View/Export Code"):
+            st.code(mermaid_content, language="mermaid")
+            st.download_button(
+                "📊 Download Mermaid Code",
+                mermaid_content,
+                "mindmap.mmd",
+                "text/plain"
+            )
+            st.info("💡 You can also copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for further customization!")
 
 def display_mind_map_tree(mind_map_data):
     """Display mind map as an interactive tree structure"""
