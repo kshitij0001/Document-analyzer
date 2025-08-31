@@ -349,8 +349,8 @@ def explore_topic_in_chat(topic_data):
             })
             # Save chat history persistently
             save_chat_history()
-            st.success(f"Added detailed discussion about '{topic_name}' to the chat!")
-            st.rerun()
+            st.success(f"✅ Added detailed discussion about '{topic_name}' to the chat! **Scroll up to see the conversation.**")
+            # Don't rerun - let user see the success message and manually check chat
         else:
             st.error(f"Failed to explore topic: {response['error']}")
 
@@ -386,8 +386,8 @@ def generate_detailed_notes(topic_data):
                 "personality": personality_name
             })
             save_chat_history()
-            st.success(f"Generated detailed notes for '{topic_name}' - check the chat!")
-            st.rerun()
+            st.success(f"✅ Generated detailed notes for '{topic_name}' - **scroll up to see the new content in the chat!**")
+            # Don't rerun - let user see the success message and manually check chat
         else:
             st.error(f"Failed to generate notes: {response['error']}")
 
@@ -423,8 +423,8 @@ def generate_comprehensive_analysis(theme_data):
                 "personality": personality_name
             })
             save_chat_history()
-            st.success(f"Generated comprehensive analysis for '{theme_name}' - check the chat!")
-            st.rerun()
+            st.success(f"✅ Generated comprehensive analysis for '{theme_name}' - **scroll up to see the new content in the chat!**")
+            # Don't rerun - let user see the success message and manually check chat
         else:
             st.error(f"Failed to generate analysis: {response['error']}")
 
@@ -460,8 +460,8 @@ def extract_data_points(theme_data):
                 "personality": personality_name
             })
             save_chat_history()
-            st.success(f"Extracted data points for '{theme_name}' - check the chat!")
-            st.rerun()
+            st.success(f"✅ Extracted data points for '{theme_name}' - **scroll up to see the new content in the chat!**")
+            # Don't rerun - let user see the success message and manually check chat
         else:
             st.error(f"Failed to extract data points: {response['error']}")
 
