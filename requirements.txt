@@ -33,3 +33,12 @@ streamlit
 plotly
 streamlit
 plotly
+numpy
+openai
+plotly
+PyPDF2
+python-docx
+requests
+scikit-learn
+scipy
+streamlit
