@@ -180,62 +180,94 @@ def display_mind_map_results(mind_map_data):
         mermaid_content = st.session_state.mindmap_generator.export_to_mermaid(mind_map_data)
         
         # Create interactive Mermaid diagram
-        mermaid_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
-            <style>
-                body {{
-                    margin: 0;
-                    padding: 20px;
-                    font-family: Arial, sans-serif;
-                }}
-                .mermaid {{
-                    text-align: center;
-                    background: white;
-                }}
-                .mermaid svg {{
-                    max-width: 100%;
-                    height: auto;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="mermaid">
+        # Check if mermaid content is valid before rendering
+        if mermaid_content and len(mermaid_content.strip()) > 10:
+            mermaid_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <script src="https://cdn.jsdelivr.net/npm/mermaid@11.0.0/dist/mermaid.min.js"></script>
+                <style>
+                    body {{
+                        margin: 0;
+                        padding: 20px;
+                        font-family: Arial, sans-serif;
+                        background: white;
+                    }}
+                    .mermaid {{
+                        text-align: center;
+                        background: white;
+                        min-height: 400px;
+                        width: 100%;
+                    }}
+                    .mermaid svg {{
+                        max-width: 100%;
+                        height: auto;
+                        background: white;
+                    }}
+                    .error-message {{
+                        color: red;
+                        padding: 20px;
+                        text-align: center;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="mermaid" id="mermaid-diagram">
 {mermaid_content}
-            </div>
-            <script>
-                mermaid.initialize({{
-                    startOnLoad: true,
-                    theme: 'default',
-                    flowchart: {{
-                        useMaxWidth: true,
-                        htmlLabels: true,
-                        curve: 'basis'
-                    }},
-                    securityLevel: 'loose'
-                }});
-                
-                // Force render after initialization
-                mermaid.run();
-            </script>
-        </body>
-        </html>
-        """
-        
-        streamlit.components.v1.html(mermaid_html, height=600, scrolling=True)
+                </div>
+                <script>
+                    // Enhanced mermaid initialization with error handling
+                    try {{
+                        mermaid.initialize({{
+                            startOnLoad: false,
+                            theme: 'default',
+                            flowchart: {{
+                                useMaxWidth: true,
+                                htmlLabels: true,
+                                curve: 'linear'
+                            }},
+                            securityLevel: 'loose',
+                            suppressErrorRendering: false
+                        }});
+                        
+                        // Parse and render the diagram
+                        const diagramElement = document.getElementById('mermaid-diagram');
+                        mermaid.run({{
+                            nodes: [diagramElement]
+                        }}).then(() => {{
+                            console.log('Mermaid diagram rendered successfully');
+                        }}).catch((error) => {{
+                            console.error('Mermaid rendering error:', error);
+                            diagramElement.innerHTML = '<div class="error-message">Failed to render diagram. Please check the mermaid code format.</div>';
+                        }});
+                    }} catch (error) {{
+                        console.error('Mermaid initialization error:', error);
+                        document.getElementById('mermaid-diagram').innerHTML = '<div class="error-message">Failed to initialize diagram renderer.</div>';
+                    }}
+                </script>
+            </body>
+            </html>
+            """
+            
+            streamlit.components.v1.html(mermaid_html, height=700, scrolling=True)
+        else:
+            st.error("❌ Failed to generate valid mermaid diagram content")
+            st.info("💡 This might be due to complex content structure. Try using the Tree View instead.")
         
         # Also provide code and download options
         with st.expander("🔧 View/Export Code"):
-            st.code(mermaid_content, language="mermaid")
-            st.download_button(
-                "📊 Download Mermaid Code",
-                mermaid_content,
-                "mindmap.mmd",
-                "text/plain"
-            )
-            st.info("💡 You can also copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for further customization!")
+            if mermaid_content:
+                st.code(mermaid_content, language="mermaid")
+                st.download_button(
+                    "📊 Download Mermaid Code",
+                    mermaid_content,
+                    "mindmap.mmd",
+                    "text/plain"
+                )
+                st.info("💡 You can also copy the code above and paste it into [Mermaid Live Editor](https://mermaid.live) for further customization!")
+            else:
+                st.warning("No mermaid content available for export")
             
 
 def display_mind_map_tree(mind_map_data):
@@ -312,158 +344,174 @@ def display_mind_map_tree(mind_map_data):
 
 def explore_topic_in_chat(topic_data):
     """Add a topic exploration question to the chat"""
-    topic_name = topic_data['name']
-    topic_summary = topic_data.get('summary', '')
-    
-    # Create a focused question
-    question = f"Tell me more about '{topic_name}'. {topic_summary} What are the key insights and details about this topic from the documents?"
-    
-    # Add to chat history
-    st.session_state.chat_history.append({
-        "role": "user",
-        "content": f"[Mind Map Topic] {topic_name}"
-    })
-    
-    with st.spinner(f"Exploring '{topic_name}'..."):
-        # Get relevant context from documents
-        context = st.session_state.vector_store.get_context_for_query(question)
+    try:
+        topic_name = topic_data['name']
+        topic_summary = topic_data.get('summary', '')
         
-        # Get AI response
-        response = st.session_state.ai_client.chat_with_document(
-            user_question=question,
-            document_context=context,
-            max_tokens=2000,
-            temperature=0.7
-        )
+        # Create a focused question
+        question = f"Tell me more about '{topic_name}'. {topic_summary} What are the key insights and details about this topic from the documents?"
         
-        if response["success"]:
-            # Add AI response to chat
-            personality_name = st.session_state.ai_client.personalities[
-                st.session_state.ai_client.current_personality
-            ]["name"]
+        # Add to chat history
+        st.session_state.chat_history.append({
+            "role": "user",
+            "content": f"[Mind Map Topic] {topic_name}"
+        })
+        
+        with st.spinner(f"Exploring '{topic_name}'..."):
+            # Get relevant context from documents
+            context = st.session_state.vector_store.get_context_for_query(question)
             
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": response["content"],
-                "personality": personality_name
-            })
-            # Save chat history persistently
-            save_chat_history()
-            st.success(f"✅ Added detailed discussion about '{topic_name}' to the chat! **Scroll up to see the conversation.**")
-            # Don't rerun - let user see the success message and manually check chat
-        else:
-            st.error(f"Failed to explore topic: {response['error']}")
+            # Get AI response
+            response = st.session_state.ai_client.chat_with_document(
+                user_question=question,
+                document_context=context,
+                max_tokens=2000,
+                temperature=0.7
+            )
+            
+            if response["success"]:
+                # Add AI response to chat
+                personality_name = st.session_state.ai_client.personalities[
+                    st.session_state.ai_client.current_personality
+                ]["name"]
+                
+                st.session_state.chat_history.append({
+                    "role": "assistant",
+                    "content": response["content"],
+                    "personality": personality_name
+                })
+                # Save chat history persistently
+                save_chat_history()
+                st.success(f"✅ Added detailed discussion about '{topic_name}' to the chat! **Scroll up to see the conversation.**")
+                # Force page refresh to show new content
+                st.rerun()
+            else:
+                st.error(f"Failed to explore topic: {response['error']}")
+    except Exception as e:
+        st.error(f"Error in explore_topic_in_chat: {str(e)}")
 
 def generate_detailed_notes(topic_data):
     """Generate detailed notes for a specific topic"""
-    topic_name = topic_data['name']
-    topic_summary = topic_data.get('summary', '')
-    
-    question = f"Generate comprehensive, detailed notes about '{topic_name}'. Include specific facts, data, methodologies, and actionable insights. Break down the information into organized sections with bullet points and structured details."
-    
-    with st.spinner(f"Generating detailed notes for '{topic_name}'..."):
-        context = st.session_state.vector_store.get_context_for_query(question)
-        response = st.session_state.ai_client.chat_with_document(
-            user_question=question,
-            document_context=context,
-            max_tokens=2500,
-            temperature=0.5
-        )
+    try:
+        topic_name = topic_data['name']
+        topic_summary = topic_data.get('summary', '')
         
-        if response["success"]:
-            personality_name = st.session_state.ai_client.personalities[
-                st.session_state.ai_client.current_personality
-            ]["name"]
+        question = f"Generate comprehensive, detailed notes about '{topic_name}'. Include specific facts, data, methodologies, and actionable insights. Break down the information into organized sections with bullet points and structured details."
+        
+        with st.spinner(f"Generating detailed notes for '{topic_name}'..."):
+            context = st.session_state.vector_store.get_context_for_query(question)
+            response = st.session_state.ai_client.chat_with_document(
+                user_question=question,
+                document_context=context,
+                max_tokens=2500,
+                temperature=0.5
+            )
             
-            st.session_state.chat_history.append({
-                "role": "user",
-                "content": f"[Detailed Notes] {topic_name}"
-            })
-            
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": response["content"],
-                "personality": personality_name
-            })
-            save_chat_history()
-            st.success(f"✅ Generated detailed notes for '{topic_name}' - **scroll up to see the new content in the chat!**")
-            # Don't rerun - let user see the success message and manually check chat
-        else:
-            st.error(f"Failed to generate notes: {response['error']}")
+            if response["success"]:
+                personality_name = st.session_state.ai_client.personalities[
+                    st.session_state.ai_client.current_personality
+                ]["name"]
+                
+                st.session_state.chat_history.append({
+                    "role": "user",
+                    "content": f"[Detailed Notes] {topic_name}"
+                })
+                
+                st.session_state.chat_history.append({
+                    "role": "assistant",
+                    "content": response["content"],
+                    "personality": personality_name
+                })
+                save_chat_history()
+                st.success(f"✅ Generated detailed notes for '{topic_name}' - **scroll up to see the new content in the chat!**")
+                # Force page refresh to show new content
+                st.rerun()
+            else:
+                st.error(f"Failed to generate notes: {response['error']}")
+    except Exception as e:
+        st.error(f"Error in generate_detailed_notes: {str(e)}")
 
 def generate_comprehensive_analysis(theme_data):
     """Generate comprehensive analysis for a theme"""
-    theme_name = theme_data['name']
-    theme_summary = theme_data.get('summary', '')
-    
-    question = f"Provide a comprehensive analysis of '{theme_name}'. Include: 1) Overview and context, 2) Key findings and insights, 3) Supporting evidence and data, 4) Implications and significance, 5) Related concepts and connections. Be thorough and analytical."
-    
-    with st.spinner(f"Generating comprehensive analysis for '{theme_name}'..."):
-        context = st.session_state.vector_store.get_context_for_query(question)
-        response = st.session_state.ai_client.chat_with_document(
-            user_question=question,
-            document_context=context,
-            max_tokens=3000,
-            temperature=0.4
-        )
+    try:
+        theme_name = theme_data['name']
+        theme_summary = theme_data.get('summary', '')
         
-        if response["success"]:
-            personality_name = st.session_state.ai_client.personalities[
-                st.session_state.ai_client.current_personality
-            ]["name"]
+        question = f"Provide a comprehensive analysis of '{theme_name}'. Include: 1) Overview and context, 2) Key findings and insights, 3) Supporting evidence and data, 4) Implications and significance, 5) Related concepts and connections. Be thorough and analytical."
+        
+        with st.spinner(f"Generating comprehensive analysis for '{theme_name}'..."):
+            context = st.session_state.vector_store.get_context_for_query(question)
+            response = st.session_state.ai_client.chat_with_document(
+                user_question=question,
+                document_context=context,
+                max_tokens=3000,
+                temperature=0.4
+            )
             
-            st.session_state.chat_history.append({
-                "role": "user",
-                "content": f"[Comprehensive Analysis] {theme_name}"
-            })
-            
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": response["content"],
-                "personality": personality_name
-            })
-            save_chat_history()
-            st.success(f"✅ Generated comprehensive analysis for '{theme_name}' - **scroll up to see the new content in the chat!**")
-            # Don't rerun - let user see the success message and manually check chat
-        else:
-            st.error(f"Failed to generate analysis: {response['error']}")
+            if response["success"]:
+                personality_name = st.session_state.ai_client.personalities[
+                    st.session_state.ai_client.current_personality
+                ]["name"]
+                
+                st.session_state.chat_history.append({
+                    "role": "user",
+                    "content": f"[Comprehensive Analysis] {theme_name}"
+                })
+                
+                st.session_state.chat_history.append({
+                    "role": "assistant",
+                    "content": response["content"],
+                    "personality": personality_name
+                })
+                save_chat_history()
+                st.success(f"✅ Generated comprehensive analysis for '{theme_name}' - **scroll up to see the new content in the chat!**")
+                # Force page refresh to show new content
+                st.rerun()
+            else:
+                st.error(f"Failed to generate analysis: {response['error']}")
+    except Exception as e:
+        st.error(f"Error in generate_comprehensive_analysis: {str(e)}")
 
 def extract_data_points(theme_data):
     """Extract specific data points and facts for a theme"""
-    theme_name = theme_data['name']
-    theme_summary = theme_data.get('summary', '')
-    
-    question = f"Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'. Present as organized lists with clear categories. Include quantitative data, qualitative findings, and cited sources where available."
-    
-    with st.spinner(f"Extracting data points for '{theme_name}'..."):
-        context = st.session_state.vector_store.get_context_for_query(question)
-        response = st.session_state.ai_client.chat_with_document(
-            user_question=question,
-            document_context=context,
-            max_tokens=2000,
-            temperature=0.2  # Lower temperature for factual extraction
-        )
+    try:
+        theme_name = theme_data['name']
+        theme_summary = theme_data.get('summary', '')
         
-        if response["success"]:
-            personality_name = st.session_state.ai_client.personalities[
-                st.session_state.ai_client.current_personality
-            ]["name"]
+        question = f"Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'. Present as organized lists with clear categories. Include quantitative data, qualitative findings, and cited sources where available."
+        
+        with st.spinner(f"Extracting data points for '{theme_name}'..."):
+            context = st.session_state.vector_store.get_context_for_query(question)
+            response = st.session_state.ai_client.chat_with_document(
+                user_question=question,
+                document_context=context,
+                max_tokens=2000,
+                temperature=0.2  # Lower temperature for factual extraction
+            )
             
-            st.session_state.chat_history.append({
-                "role": "user",
-                "content": f"[Data Points] {theme_name}"
-            })
-            
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": response["content"],
-                "personality": personality_name
-            })
-            save_chat_history()
-            st.success(f"✅ Extracted data points for '{theme_name}' - **scroll up to see the new content in the chat!**")
-            # Don't rerun - let user see the success message and manually check chat
-        else:
-            st.error(f"Failed to extract data points: {response['error']}")
+            if response["success"]:
+                personality_name = st.session_state.ai_client.personalities[
+                    st.session_state.ai_client.current_personality
+                ]["name"]
+                
+                st.session_state.chat_history.append({
+                    "role": "user",
+                    "content": f"[Data Points] {theme_name}"
+                })
+                
+                st.session_state.chat_history.append({
+                    "role": "assistant",
+                    "content": response["content"],
+                    "personality": personality_name
+                })
+                save_chat_history()
+                st.success(f"✅ Extracted data points for '{theme_name}' - **scroll up to see the new content in the chat!**")
+                # Force page refresh to show new content
+                st.rerun()
+            else:
+                st.error(f"Failed to extract data points: {response['error']}")
+    except Exception as e:
+        st.error(f"Error in extract_data_points: {str(e)}")
 
 def add_debug_info(message):
     """Add debug information to global debug log"""
@@ -1599,7 +1647,9 @@ def generate_mind_map():
                 cache_key = get_cache_key(documents_hash, "mind_map", personality)
                 if cache_key in st.session_state.cached_analyses:
                     del st.session_state.cached_analyses[cache_key]
-                st.rerun()
+                # Generate fresh mind map immediately
+                generate_fresh_mind_map()
+                return
         
         # Display the cached mind map
         display_mind_map_results(cached_result["content"])

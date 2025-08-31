@@ -236,7 +236,7 @@ Document content:
             context_info = f"Document(s): {', '.join(document_titles)}\n\n"
         
         # Simplified prompt for better JSON generation
-        prompt = f"""Analyze the document and create a structured mind map. Return ONLY valid JSON in this exact format:
+        prompt = f"""Analyze the document content and create a detailed mind map structure. Return ONLY valid JSON in this exact format:
 
 {{
   "title": "Document Mind Map", 
@@ -262,7 +262,11 @@ Important rules:
 - Use double quotes for all strings  
 - No trailing commas
 - Keep names under 50 characters
-- Generate 4-6 main themes with 2-4 subtopics each
+- Generate 4-6 main themes
+- For each theme, generate 1-6 subtopics based on the actual content depth and complexity
+- Create more subtopics for complex themes with rich content
+- Create fewer subtopics for simpler themes
+- Ensure subtopics are meaningful and substantive
 
 {context_info}Document content:
 {document_text[:8000]}"""
