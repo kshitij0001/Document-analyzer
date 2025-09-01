@@ -13,3 +13,14 @@ fuzzywuzzy
 python-levenshtein
 google-genai
 google-generativeai
+fuzzywuzzy
+google-generativeai
+numpy
+plotly
+PyPDF2
+python-docx
+python-levenshtein
+requests
+scikit-learn
+scipy
+streamlit
