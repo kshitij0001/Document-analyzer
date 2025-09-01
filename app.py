@@ -1057,7 +1057,7 @@ sources_col, chat_col, studio_col = st.columns([1, 2, 2])
 with sources_col:
     
     # Sources header
-    st.markdown('<div class="panel-header">📁 Sources</div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Sources</div>', unsafe_allow_html=True)
     
     # Document upload
     upload_document()
@@ -1070,7 +1070,7 @@ with sources_col:
     st.markdown("---")
     
     # AI Settings
-    st.markdown("**⚙️ Settings**")
+    st.markdown("**<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 8v6m11-12h-6M7 12H1m11-7.07L9.17 7.05M14.83 16.95L16.95 14.83M16.95 9.17L14.83 7.05M9.17 16.95L7.05 14.83"/></svg> Settings**", unsafe_allow_html=True)
     
     # Model selection
     available_models = st.session_state.ai_client.available_models
@@ -1130,7 +1130,7 @@ with sources_col:
 with chat_col:
     
     # Chat header
-    st.markdown('<div class="panel-header">💬 Chat</div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Chat</div>', unsafe_allow_html=True)
     
     # Initialize chat messages
     if "chat_messages" not in st.session_state:
@@ -1202,7 +1202,7 @@ with studio_col:
     # Studio header with refresh button
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown('<div class="panel-header">🎬 Studio</div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16 10,8"/></svg> Studio</div>', unsafe_allow_html=True)
     with col2:
         if st.button("🔄", help="Refresh all analyses"):
             st.session_state.cached_analyses = {}
