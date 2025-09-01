@@ -28,6 +28,30 @@ except Exception as e:
     go = None
     make_subplots = None
 
+# PNG Icon Loading Function
+import base64
+
+def load_png_icons():
+    """Load PNG icons and convert to base64 for embedding"""
+    try:
+        # Load gear icon for settings
+        with open("attached_assets/gear_1756730569552.png", "rb") as f:
+            gear_b64 = base64.b64encode(f.read()).decode()
+            st.session_state.gear_icon_b64 = gear_b64
+        
+        # Load mind map icon
+        with open("attached_assets/mind-map_1756730569553.png", "rb") as f:
+            mindmap_b64 = base64.b64encode(f.read()).decode()
+            st.session_state.mindmap_icon_b64 = mindmap_b64
+            
+        # Load process icon for logo
+        with open("attached_assets/process_1756730569550.png", "rb") as f:
+            process_b64 = base64.b64encode(f.read()).decode()
+            st.session_state.process_icon_b64 = process_b64
+            
+    except Exception as e:
+        st.error(f"Error loading PNG icons: {e}")
+
 # SVG Icon Component Function
 def get_svg_icon(icon_name, size=16, color="currentColor"):
     """Generate SVG icons to replace emojis"""
@@ -382,7 +406,7 @@ def perform_details_generation(sub_theme_data):
 # Page configuration
 st.set_page_config(
     page_title="AI Document Analyzer & Chat",
-    page_icon="⚙️",
+    page_icon="attached_assets/process_1756730569550.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -390,6 +414,9 @@ st.set_page_config(
 # Initialize session state
 if "processor" not in st.session_state:
     st.session_state.processor = DocumentProcessor()
+if "icons_loaded" not in st.session_state:
+    load_png_icons()
+    st.session_state.icons_loaded = True
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = VectorStore()
 if "ai_client" not in st.session_state:
@@ -1076,6 +1103,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# App header with logo
+col1, col2 = st.columns([1, 4])
+with col1:
+    if "process_icon_b64" in st.session_state:
+        st.markdown(f"<img src='data:image/png;base64,{st.session_state.process_icon_b64}' width='48' height='48' style='margin-bottom: 1rem;'>", unsafe_allow_html=True)
+with col2:
+    st.markdown("# AI Document Analyzer & Chat")
+    st.markdown("*Upload documents and chat with them using AI*")
+
+st.markdown("---")
+
 # Main three-column layout
 sources_col, chat_col, studio_col = st.columns([1, 2, 2])
 
@@ -1096,7 +1134,7 @@ with sources_col:
     st.markdown("---")
     
     # AI Settings
-    st.markdown(f"**{get_svg_icon('settings', 16)} Settings**", unsafe_allow_html=True)
+    st.markdown(f"**<img src='data:image/png;base64,{st.session_state.get('gear_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 4px;'> Settings**", unsafe_allow_html=True)
     
     # Model selection
     available_models = st.session_state.ai_client.available_models
@@ -1246,7 +1284,8 @@ with studio_col:
                 extract_key_points()
                 st.rerun()
         with col2:
-            if st.button("Mind Map", use_container_width=True):
+            mindmap_icon = f"<img src='data:image/png;base64,{st.session_state.get('mindmap_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 4px;'>"
+            if st.button(f"{mindmap_icon} Mind Map", use_container_width=True):
                 generate_mind_map()
                 st.rerun()
             if st.button("Sentiment", use_container_width=True):
