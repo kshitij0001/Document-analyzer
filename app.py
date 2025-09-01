@@ -989,8 +989,6 @@ st.markdown("""
         background-color: #1e1e1e;
         border-radius: 12px;
         padding: 1.5rem;
-        height: 85vh;
-        overflow-y: auto;
         border: 1px solid #333;
     }
     
@@ -998,9 +996,6 @@ st.markdown("""
         background-color: #262626;
         border-radius: 12px;
         padding: 1.5rem;
-        height: 85vh;
-        display: flex;
-        flex-direction: column;
         border: 1px solid #404040;
     }
     
@@ -1008,8 +1003,6 @@ st.markdown("""
         background-color: #1a1a1a;
         border-radius: 12px;
         padding: 1.5rem;
-        height: 85vh;
-        overflow-y: auto;
         border: 1px solid #333;
     }
     
@@ -1028,13 +1021,12 @@ st.markdown("""
     
     /* Chat messages styling */
     .chat-container {
-        flex: 1;
         background-color: #1a1a1a;
         border-radius: 8px;
         padding: 1rem;
         margin-bottom: 1rem;
+        max-height: 400px;
         overflow-y: auto;
-        max-height: 65vh;
         border: 1px solid #404040;
     }
     
