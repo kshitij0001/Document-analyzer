@@ -24,3 +24,14 @@ requests
 scikit-learn
 scipy
 streamlit
+fuzzywuzzy
+google-generativeai
+numpy
+openai
+plotly
+pypdf2
+python-docx
+python-levenshtein
+requests
+scikit-learn
+streamlit
