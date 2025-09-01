@@ -984,27 +984,7 @@ st.markdown("""
         background-color: #0e1117;
     }
     
-    /* Column styling */
-    .sources-panel {
-        background-color: #1e1e1e;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #333;
-    }
-    
-    .chat-panel {
-        background-color: #262626;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #404040;
-    }
-    
-    .studio-panel {
-        background-color: #1a1a1a;
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid #333;
-    }
+    /* Column styling - removed all boxes */
     
     /* Header styling */
     .panel-header {
@@ -1019,24 +999,16 @@ st.markdown("""
         gap: 0.5rem;
     }
     
-    /* Chat messages styling */
+    /* Chat messages styling - removed container box */
     .chat-container {
-        background-color: #1a1a1a;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1rem;
         max-height: 400px;
         overflow-y: auto;
-        border: 1px solid #404040;
+        margin-bottom: 1rem;
     }
     
-    /* Analysis cards */
+    /* Analysis cards - removed boxes */
     .analysis-result {
-        background-color: #2a2a2a;
-        border-radius: 8px;
-        padding: 1rem;
         margin-bottom: 1rem;
-        border: 1px solid #404040;
         color: #e0e0e0;
     }
     
@@ -1083,7 +1055,6 @@ sources_col, chat_col, studio_col = st.columns([1, 2, 2])
 
 # SOURCES COLUMN (Left)
 with sources_col:
-    st.markdown('<div class="sources-panel">', unsafe_allow_html=True)
     
     # Sources header
     st.markdown('<div class="panel-header">📁 Sources</div>', unsafe_allow_html=True)
@@ -1153,11 +1124,10 @@ with sources_col:
         clear_persistent_chat()
         st.success("Chat cleared!")
     
-    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # CHAT COLUMN (Middle)
 with chat_col:
-    st.markdown('<div class="chat-panel">', unsafe_allow_html=True)
     
     # Chat header
     st.markdown('<div class="panel-header">💬 Chat</div>', unsafe_allow_html=True)
@@ -1179,7 +1149,7 @@ with chat_col:
                 with st.chat_message("assistant"):
                     st.write(message["message"])
         
-        st.markdown('</div>', unsafe_allow_html=True)
+    
         
         # Chat input at bottom
         user_question = st.chat_input("Ask a question about your documents...")
@@ -1221,14 +1191,13 @@ with chat_col:
                     st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
                     st.rerun()
     else:
-        st.markdown('</div>', unsafe_allow_html=True)
+    
         st.info("Upload documents to start chatting!")
     
-    st.markdown('</div>', unsafe_allow_html=True)
+
 
 # STUDIO COLUMN (Right) 
 with studio_col:
-    st.markdown('<div class="studio-panel">', unsafe_allow_html=True)
     
     # Studio header with refresh button
     col1, col2 = st.columns([3, 1])
@@ -1270,7 +1239,7 @@ with studio_col:
                 with st.expander("📝 Document Summary", expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     st.write(summary_cache["content"])
-                    st.markdown('</div>', unsafe_allow_html=True)
+                
             
             # Key points section
             key_points_cache = get_cached_analysis("key_points")
@@ -1278,7 +1247,7 @@ with studio_col:
                 with st.expander("🎯 Key Points", expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     st.write(key_points_cache["content"])
-                    st.markdown('</div>', unsafe_allow_html=True)
+                
             
             # Sentiment section
             sentiment_cache = get_cached_analysis("sentiment")
@@ -1286,7 +1255,7 @@ with studio_col:
                 with st.expander("📈 Sentiment Analysis", expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     st.write(sentiment_cache["content"])
-                    st.markdown('</div>', unsafe_allow_html=True)
+                
             
             # Mind map section
             mindmap_cache = get_cached_analysis("mind_map")
@@ -1294,7 +1263,7 @@ with studio_col:
                 with st.expander("🧠 Mind Map", expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     display_mind_map_results(mindmap_cache["content"])
-                    st.markdown('</div>', unsafe_allow_html=True)
+                
         
     else:
         st.info("Upload documents to start analyzing!")
@@ -1313,4 +1282,3 @@ with studio_col:
         Upload your documents using the Sources section to begin!
         """)
     
-    st.markdown('</div>', unsafe_allow_html=True)
