@@ -965,62 +965,123 @@ def generate_mind_map():
     
     generate_fresh_mind_map()
 
-# Custom CSS for the layout
+# Modern dark UI styling
 st.markdown("""
 <style>
+    /* Main container styling */
     .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
+        padding: 1rem 2rem;
         max-width: 100%;
+        background-color: #0e1117;
     }
-    .sources-section {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        max-height: 80vh;
+    
+    /* Hide default streamlit elements */
+    .stApp > header {
+        background-color: transparent;
+    }
+    
+    .stApp {
+        background-color: #0e1117;
+    }
+    
+    /* Column styling */
+    .sources-panel {
+        background-color: #1e1e1e;
+        border-radius: 12px;
+        padding: 1.5rem;
+        height: 85vh;
         overflow-y: auto;
+        border: 1px solid #333;
     }
-    .chat-section {
-        background-color: #ffffff;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        max-height: 80vh;
+    
+    .chat-panel {
+        background-color: #262626;
+        border-radius: 12px;
+        padding: 1.5rem;
+        height: 85vh;
         display: flex;
         flex-direction: column;
+        border: 1px solid #404040;
     }
-    .studio-section {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        max-height: 80vh;
+    
+    .studio-panel {
+        background-color: #1a1a1a;
+        border-radius: 12px;
+        padding: 1.5rem;
+        height: 85vh;
         overflow-y: auto;
+        border: 1px solid #333;
     }
-    .chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        max-height: 60vh;
-        padding: 1rem;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-    .analysis-card {
-        background-color: white;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-        margin-bottom: 1rem;
-    }
-    .section-header {
-        font-size: 1.1rem;
+    
+    /* Header styling */
+    .panel-header {
+        color: #ffffff;
+        font-size: 1.2rem;
         font-weight: 600;
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #404040;
         display: flex;
         align-items: center;
         gap: 0.5rem;
+    }
+    
+    /* Chat messages styling */
+    .chat-container {
+        flex: 1;
+        background-color: #1a1a1a;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        overflow-y: auto;
+        max-height: 65vh;
+        border: 1px solid #404040;
+    }
+    
+    /* Analysis cards */
+    .analysis-result {
+        background-color: #2a2a2a;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #404040;
+        color: #e0e0e0;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        background-color: #45a049;
+        transform: translateY(-1px);
+    }
+    
+    /* Text styling */
+    .stMarkdown {
+        color: #e0e0e0;
+    }
+    
+    /* Sidebar styling */
+    .css-1d391kg {
+        background-color: #1e1e1e;
+    }
+    
+    /* Remove white backgrounds */
+    .stExpander {
+        background-color: transparent !important;
+    }
+    
+    .stExpander > div {
+        background-color: #2a2a2a !important;
+        border: 1px solid #404040 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1030,239 +1091,234 @@ sources_col, chat_col, studio_col = st.columns([1, 2, 2])
 
 # SOURCES COLUMN (Left)
 with sources_col:
-    with st.container():
-        st.markdown('<div class="sources-section">', unsafe_allow_html=True)
+    st.markdown('<div class="sources-panel">', unsafe_allow_html=True)
+    
+    # Sources header
+    st.markdown('<div class="panel-header">📁 Sources</div>', unsafe_allow_html=True)
+    
+    # Document upload
+    upload_document()
+    
+    st.markdown("---")
+    
+    # Document list
+    display_documents()
+    
+    st.markdown("---")
+    
+    # AI Settings
+    st.markdown("**⚙️ Settings**")
+    
+    # Model selection
+    available_models = st.session_state.ai_client.available_models
+    if available_models:
+        current_model_key = None
+        for key, value in available_models.items():
+            if value == st.session_state.ai_client.current_model:
+                current_model_key = key
+                break
         
-        # Sources header with collapse functionality
-        sources_expanded = st.checkbox("📁 Sources", value=True)
-        
-        if sources_expanded:
-            # Document upload
-            st.markdown("### Add Documents")
-            upload_document()
+        if current_model_key:
+            model_options = list(available_models.keys())
+            current_index = model_options.index(current_model_key)
             
-            st.markdown("---")
-            
-            # Document list
-            st.markdown("### Documents")
-            display_documents()
-            
-            st.markdown("---")
-            
-            # AI Settings
-            st.markdown("### ⚙️ Settings")
-            
-            # Model selection
-            available_models = st.session_state.ai_client.available_models
-            if available_models:
-                current_model_key = None
-                for key, value in available_models.items():
-                    if value == st.session_state.ai_client.current_model:
-                        current_model_key = key
-                        break
-                
-                if current_model_key:
-                    model_options = list(available_models.keys())
-                    current_index = model_options.index(current_model_key)
-                    
-                    selected_model = st.selectbox(
-                        "AI Model",
-                        options=model_options,
-                        index=current_index,
-                        help="Choose the AI model"
-                    )
-                    
-                    if selected_model != current_model_key:
-                        if st.session_state.ai_client.set_model(selected_model):
-                            st.success(f"Switched to {selected_model}")
-                        else:
-                            st.error(f"Failed to switch to {selected_model}")
-            
-            # Personality selection
-            personalities = st.session_state.ai_client.get_available_personalities()
-            personality_options = list(personalities.keys())
-            
-            current_personality_index = personality_options.index(st.session_state.ai_client.current_personality)
-            
-            selected_personality = st.selectbox(
-                "AI Personality",
-                options=personality_options,
-                format_func=lambda x: personalities[x]["name"],
-                index=current_personality_index,
-                help="Choose AI personality"
+            selected_model = st.selectbox(
+                "AI Model",
+                options=model_options,
+                index=current_index,
+                help="Choose the AI model"
             )
             
-            if selected_personality != st.session_state.ai_client.current_personality:
-                if st.session_state.ai_client.set_personality(selected_personality):
-                    st.success(f"Switched to {personalities[selected_personality]['name']}")
-                    st.session_state.cached_analyses = {}
+            if selected_model != current_model_key:
+                if st.session_state.ai_client.set_model(selected_model):
+                    st.success(f"Switched to {selected_model}")
                 else:
-                    st.error(f"Failed to switch personality")
-            
-            # Clear chat button
-            if st.button("🗑️ Clear Chat", use_container_width=True):
-                clear_persistent_chat()
-                st.success("Chat cleared!")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+                    st.error(f"Failed to switch to {selected_model}")
+    
+    # Personality selection
+    personalities = st.session_state.ai_client.get_available_personalities()
+    personality_options = list(personalities.keys())
+    
+    current_personality_index = personality_options.index(st.session_state.ai_client.current_personality)
+    
+    selected_personality = st.selectbox(
+        "AI Personality",
+        options=personality_options,
+        format_func=lambda x: personalities[x]["name"],
+        index=current_personality_index,
+        help="Choose AI personality"
+    )
+    
+    if selected_personality != st.session_state.ai_client.current_personality:
+        if st.session_state.ai_client.set_personality(selected_personality):
+            st.success(f"Switched to {personalities[selected_personality]['name']}")
+            st.session_state.cached_analyses = {}
+        else:
+            st.error(f"Failed to switch personality")
+    
+    # Clear chat button
+    if st.button("🗑️ Clear Chat", use_container_width=True):
+        clear_persistent_chat()
+        st.success("Chat cleared!")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # CHAT COLUMN (Middle)
 with chat_col:
-    with st.container():
-        st.markdown('<div class="chat-section">', unsafe_allow_html=True)
-        
-        st.markdown('<div class="section-header">💬 Chat</div>', unsafe_allow_html=True)
-        
-        # Initialize chat messages
-        if "chat_messages" not in st.session_state:
-            st.session_state.chat_messages = []
-        
-        # Chat messages container (scrollable)
-        st.markdown('<div class="chat-messages">', unsafe_allow_html=True)
-        
-        if st.session_state.documents:
-            # Display chat history
-            for i, message in enumerate(st.session_state.chat_messages):
-                if message["role"] == "user":
-                    with st.chat_message("user"):
-                        st.write(message["message"])
-                else:
-                    with st.chat_message("assistant"):
-                        st.write(message["message"])
-            
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            # Chat input at bottom
-            user_question = st.chat_input("Ask a question about your documents...")
-            
-            if user_question:
-                # Add user message to chat
-                st.session_state.chat_messages.append({"role": "user", "message": user_question})
-                
-                # Get relevant context from documents
-                with st.spinner("🤖 Thinking..."):
-                    # Use vector store to find relevant chunks
-                    results = st.session_state.vector_store.search(user_question)
-                    
-                    if results:
-                        context = "\n\n".join([result["chunk"]["text"] for result in results[:3]])
-                    else:
-                        # Fallback: use first chunk of each document
-                        context_parts = []
-                        for filename, doc_info in st.session_state.documents.items():
-                            if doc_info["success"] and doc_info["chunks"]:
-                                context_parts.append(doc_info["chunks"][0]["text"])
-                        context = "\n\n".join(context_parts)
-                    
-                    # Get AI response
-                    response = st.session_state.ai_client.chat_with_document(
-                        user_question,
-                        context,
-                        max_tokens=1000
-                    )
-                    
-                    # Add response to chat
-                    if response["success"]:
-                        ai_message = response["content"]
-                        st.session_state.chat_messages.append({"role": "assistant", "message": ai_message})
-                        save_chat_history()
-                        st.rerun()
-                    else:
-                        error_message = f"Sorry, I encountered an error: {response['error']}"
-                        st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
-                        st.rerun()
-        else:
-            st.markdown('</div>', unsafe_allow_html=True)
-            st.write("Upload documents to start chatting!")
+    st.markdown('<div class="chat-panel">', unsafe_allow_html=True)
+    
+    # Chat header
+    st.markdown('<div class="panel-header">💬 Chat</div>', unsafe_allow_html=True)
+    
+    # Initialize chat messages
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    # Chat messages container (scrollable)
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+    
+    if st.session_state.documents:
+        # Display chat history
+        for i, message in enumerate(st.session_state.chat_messages):
+            if message["role"] == "user":
+                with st.chat_message("user"):
+                    st.write(message["message"])
+            else:
+                with st.chat_message("assistant"):
+                    st.write(message["message"])
         
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Chat input at bottom
+        user_question = st.chat_input("Ask a question about your documents...")
+        
+        if user_question:
+            # Add user message to chat
+            st.session_state.chat_messages.append({"role": "user", "message": user_question})
+            
+            # Get relevant context from documents
+            with st.spinner("🤖 Thinking..."):
+                # Use vector store to find relevant chunks
+                results = st.session_state.vector_store.search(user_question)
+                
+                if results:
+                    context = "\n\n".join([result["chunk"]["text"] for result in results[:3]])
+                else:
+                    # Fallback: use first chunk of each document
+                    context_parts = []
+                    for filename, doc_info in st.session_state.documents.items():
+                        if doc_info["success"] and doc_info["chunks"]:
+                            context_parts.append(doc_info["chunks"][0]["text"])
+                    context = "\n\n".join(context_parts)
+                
+                # Get AI response
+                response = st.session_state.ai_client.chat_with_document(
+                    user_question,
+                    context,
+                    max_tokens=1000
+                )
+                
+                # Add response to chat
+                if response["success"]:
+                    ai_message = response["content"]
+                    st.session_state.chat_messages.append({"role": "assistant", "message": ai_message})
+                    save_chat_history()
+                    st.rerun()
+                else:
+                    error_message = f"Sorry, I encountered an error: {response['error']}"
+                    st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
+                    st.rerun()
+    else:
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.info("Upload documents to start chatting!")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # STUDIO COLUMN (Right) 
 with studio_col:
-    with st.container():
-        st.markdown('<div class="studio-section">', unsafe_allow_html=True)
-        
-        # Studio header
-        col1, col2 = st.columns([3, 1])
+    st.markdown('<div class="studio-panel">', unsafe_allow_html=True)
+    
+    # Studio header with refresh button
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown('<div class="panel-header">🎬 Studio</div>', unsafe_allow_html=True)
+    with col2:
+        if st.button("🔄", help="Refresh all analyses"):
+            st.session_state.cached_analyses = {}
+            st.rerun()
+    
+    if st.session_state.documents:
+        # Analysis buttons in a grid
+        st.markdown("**Generate Analysis**")
+        col1, col2 = st.columns(2)
         with col1:
-            st.markdown('<div class="section-header">🎬 Studio</div>', unsafe_allow_html=True)
+            if st.button("📝 Summary", use_container_width=True):
+                generate_document_summary()
+                st.rerun()
+            if st.button("🎯 Key Points", use_container_width=True):
+                extract_key_points()
+                st.rerun()
         with col2:
-            if st.button("🔄", help="Refresh all analyses"):
-                st.session_state.cached_analyses = {}
+            if st.button("🧠 Mind Map", use_container_width=True):
+                generate_mind_map()
+                st.rerun()
+            if st.button("📈 Sentiment", use_container_width=True):
+                analyze_sentiment()
                 st.rerun()
         
-        if st.session_state.documents:
-            # Analysis buttons in a grid
-            st.markdown("### Generate Analysis")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("📝 Summary", use_container_width=True):
-                    generate_document_summary()
-                    st.rerun()
-                if st.button("🎯 Key Points", use_container_width=True):
-                    extract_key_points()
-                    st.rerun()
-            with col2:
-                if st.button("🧠 Mind Map", use_container_width=True):
-                    generate_mind_map()
-                    st.rerun()
-                if st.button("📈 Sentiment", use_container_width=True):
-                    analyze_sentiment()
-                    st.rerun()
-            
-            st.markdown("---")
-            
-            # Display cached analyses
-            if st.session_state.cached_analyses:
-                st.markdown("### Analysis Results")
-                
-                # Summary section
-                summary_cache = get_cached_analysis("summary")
-                if summary_cache:
-                    with st.expander("📝 Document Summary", expanded=True):
-                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
-                        st.write(summary_cache["content"])
-                        st.markdown('</div>', unsafe_allow_html=True)
-                
-                # Key points section
-                key_points_cache = get_cached_analysis("key_points")
-                if key_points_cache:
-                    with st.expander("🎯 Key Points", expanded=True):
-                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
-                        st.write(key_points_cache["content"])
-                        st.markdown('</div>', unsafe_allow_html=True)
-                
-                # Sentiment section
-                sentiment_cache = get_cached_analysis("sentiment")
-                if sentiment_cache:
-                    with st.expander("📈 Sentiment Analysis", expanded=True):
-                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
-                        st.write(sentiment_cache["content"])
-                        st.markdown('</div>', unsafe_allow_html=True)
-                
-                # Mind map section
-                mindmap_cache = get_cached_analysis("mind_map")
-                if mindmap_cache:
-                    with st.expander("🧠 Mind Map", expanded=True):
-                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
-                        display_mind_map_results(mindmap_cache["content"])
-                        st.markdown('</div>', unsafe_allow_html=True)
-            
-        else:
-            st.info("Upload documents to start analyzing!")
-            st.markdown("""
-            ### Welcome to AI Document Analyzer!
-            
-            **What you can do:**
-            
-            🔍 **Analyze Documents**: Extract summaries, key points, and insights  
-            🧠 **Generate Mind Maps**: Visual representations of document content  
-            💬 **Chat with Documents**: Ask questions and get contextual answers  
-            🎭 **Multiple AI Personalities**: Specialized perspectives  
-            
-            **Supported formats**: PDF, Word documents, Plain text
-            
-            Upload your documents using the Sources section to begin!
-            """)
+        st.markdown("---")
         
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Display cached analyses
+        if st.session_state.cached_analyses:
+            st.markdown("**Analysis Results**")
+            
+            # Summary section
+            summary_cache = get_cached_analysis("summary")
+            if summary_cache:
+                with st.expander("📝 Document Summary", expanded=True):
+                    st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
+                    st.write(summary_cache["content"])
+                    st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Key points section
+            key_points_cache = get_cached_analysis("key_points")
+            if key_points_cache:
+                with st.expander("🎯 Key Points", expanded=True):
+                    st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
+                    st.write(key_points_cache["content"])
+                    st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Sentiment section
+            sentiment_cache = get_cached_analysis("sentiment")
+            if sentiment_cache:
+                with st.expander("📈 Sentiment Analysis", expanded=True):
+                    st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
+                    st.write(sentiment_cache["content"])
+                    st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Mind map section
+            mindmap_cache = get_cached_analysis("mind_map")
+            if mindmap_cache:
+                with st.expander("🧠 Mind Map", expanded=True):
+                    st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
+                    display_mind_map_results(mindmap_cache["content"])
+                    st.markdown('</div>', unsafe_allow_html=True)
+        
+    else:
+        st.info("Upload documents to start analyzing!")
+        st.markdown("""
+        **Welcome to AI Document Analyzer!**
+        
+        **What you can do:**
+        
+        🔍 **Analyze Documents**: Extract summaries, key points, and insights  
+        🧠 **Generate Mind Maps**: Visual representations of document content  
+        💬 **Chat with Documents**: Ask questions and get contextual answers  
+        🎭 **Multiple AI Personalities**: Specialized perspectives  
+        
+        **Supported formats**: PDF, Word documents, Plain text
+        
+        Upload your documents using the Sources section to begin!
+        """)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
