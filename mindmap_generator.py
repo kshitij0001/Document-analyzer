@@ -10,6 +10,18 @@ import time
 from typing import Dict, List, Optional, Any, Tuple
 import streamlit as st
 
+# SVG Icon Component Function
+def get_svg_icon(icon_name, size=16, color="currentColor"):
+    """Generate SVG icons to replace emojis"""
+    icons = {
+        "refresh": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
+        "rocket": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>',
+        "check": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+        "warning": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+        "info": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><ellipse cx="12" cy="5" rx="3" ry="3"></ellipse><path d="m2 13 20 6-6-20A20 20 0 0 0 2 13"></path><path d="M20 2c-4.6 5.5-6.3 11.2-5 17"></path></svg>'
+    }
+    return icons.get(icon_name, f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>')
+
 # Try to import fuzzywuzzy, use simple fallback if not available
 try:
     from fuzzywuzzy import fuzz
@@ -65,15 +77,15 @@ class MindMapGenerator:
             return {"error": "No document content provided"}
         
         try:
-            with st.status("🚀 Generating mind map (optimized)...", expanded=True) as status:
+            with st.status("Generating mind map (optimized)...", expanded=True) as status:
                 st.write("Creating comprehensive mind map structure...")
                 
                 # Generate complete mind map in ONE API call instead of 50+
                 mind_map_data = self._generate_complete_mind_map(document_text, document_titles)
                 
                 if mind_map_data and "themes" in mind_map_data:
-                    st.write(f"✅ Generated {len(mind_map_data['themes'])} themes with subtopics")
-                    status.update(label="✅ Mind map completed in seconds!", state="complete")
+                    st.write(f"Generated {len(mind_map_data['themes'])} themes with subtopics")
+                    status.update(label="Mind map completed in seconds!", state="complete")
                     return mind_map_data
                 else:
                     # Fallback to original method if optimized version fails
@@ -230,7 +242,7 @@ Document content:
         max_content_length = 15000  # Increased from 8000
         
         if len(document_text) > max_content_length:
-            st.info(f"📄 Large document detected ({len(document_text):,} characters). Using intelligent sampling...")
+            st.info(f"Large document detected ({len(document_text):,} characters). Using intelligent sampling...", icon="ℹ️")
             
             # Intelligent sampling strategy
             sample_size = max_content_length // 4
@@ -303,7 +315,7 @@ Instructions:
                 continue
         
         # Fallback method
-        st.warning("⚠️ Optimized generation failed, using fallback method...")
+        st.warning("Optimized generation failed, using fallback method...", icon="⚠")
         return self._generate_mind_map_fallback(document_text, document_titles)
 
     def _process_json_response(self, content: str, attempt_num: int) -> Dict[str, Any]:

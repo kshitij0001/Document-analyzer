@@ -28,6 +28,29 @@ except Exception as e:
     go = None
     make_subplots = None
 
+# SVG Icon Component Function
+def get_svg_icon(icon_name, size=16, color="currentColor"):
+    """Generate SVG icons to replace emojis"""
+    icons = {
+        "refresh": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
+        "summary": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14,2 14,8 20,8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10,9 9,9 8,9"></polyline></svg>',
+        "target": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>',
+        "brain": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M12 2c1.3 0 2.6.4 3.8 1.2C17.4 2.4 19.1 2 21 2.5c1.9.5 3 2.4 3 4.5 0 1.8-1.1 3.4-2.7 4.1.4.7.7 1.5.7 2.4 0 2.8-2.2 5-5 5h-3c-2.8 0-5-2.2-5-5 0-.9.3-1.7.7-2.4C7.1 9.9 6 8.3 6 6.5c0-2.1 1.1-4 3-4.5 1.9-.5 3.6-.1 5.2.8 1.2-.8 2.5-1.2 3.8-1.2z"></path></svg>',
+        "chart": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>',
+        "search": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>',
+        "chat": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>',
+        "users": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+        "rocket": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>',
+        "check": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+        "warning": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+        "explore": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>',
+        "details": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14,2 14,8 20,8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="8" y2="9"></line></svg>',
+        "analyze": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1m15.5-6.5-4.24 4.24M7.76 16.24 3.5 20.5m13-13L12.24 11.76M7.76 7.76 3.5 3.5"></path></svg>',
+        "data": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
+        "discuss": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1.5-2s-1.5.62-1.5 2a2.5 2.5 0 0 0 2.5 2.5z"></path><path d="M12 6c2.5 0 3.5 2.5 3.5 5s-1 5-3.5 5-3.5-2.5-3.5-5 1-5 3.5-5z"></path><path d="M3 19c0-8 5-8 9-8s9 0 9 8"></path></svg>'
+    }
+    return icons.get(icon_name, f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>')
+
 # Helper functions for caching and chat persistence
 def load_cached_analyses():
     """Load cached analysis results from session state"""
@@ -203,7 +226,7 @@ def handle_pending_actions():
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         st.session_state.chat_messages.append({"role": "user", "message": question})
-        st.success(f"💬 Started exploration of '{topic['name']}' - check the Chat tab!")
+        st.success(f"{get_svg_icon('chat', 16)} Started exploration of '{topic['name']}' - check the Chat tab!", icon="✓")
     
     # Handle details
     if "pending_details" in st.session_state:
@@ -234,7 +257,7 @@ def handle_pending_actions():
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         st.session_state.chat_messages.append({"role": "user", "message": question})
-        st.success(f"💬 Started discussion about '{topic['name']}' - check the Chat tab!")
+        st.success(f"{get_svg_icon('chat', 16)} Started discussion about '{topic['name']}' - check the Chat tab!", icon="✓")
 
 def perform_comprehensive_analysis(theme_data):
     """Perform comprehensive analysis and display results"""
@@ -305,7 +328,7 @@ def perform_data_extraction(theme_data):
             )
             
             if response["success"]:
-                st.success(f"📊 Data Points: {theme_name}")
+                st.success(f"{get_svg_icon('data', 16)} Data Points: {theme_name}", icon="✓")
                 st.write(response["content"])
             else:
                 st.error(f"Data extraction failed: {response.get('error', 'Unknown error')}")
@@ -324,7 +347,7 @@ def perform_details_generation(sub_theme_data):
         combined_text = "\n\n".join(all_text)
         topic_name = sub_theme_data["name"]
         
-        with st.spinner(f"📋 Generating details for '{topic_name}'..."):
+        with st.spinner(f"Generating details for '{topic_name}'..."):
             details_prompt = f"""Generate comprehensive, detailed notes about '{topic_name}' based on the document content.
             
             Include:
@@ -345,7 +368,7 @@ def perform_details_generation(sub_theme_data):
             )
             
             if response["success"]:
-                st.success(f"📋 Detailed Notes: {topic_name}")
+                st.success(f"{get_svg_icon('details', 16)} Detailed Notes: {topic_name}", icon="✓")
                 st.write(response["content"])
             else:
                 st.error(f"Details generation failed: {response.get('error', 'Unknown error')}")
@@ -396,7 +419,7 @@ def display_mind_map_results(mind_map_data):
     st.session_state.mindmap_data = mind_map_data
     
     # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["🌳 Tree View", "📋 Markdown", "🔗 Mermaid Diagram"])
+    tab1, tab2, tab3 = st.tabs([f"{get_svg_icon('brain', 16)} Tree View", f"{get_svg_icon('details', 16)} Markdown", f"{get_svg_icon('analyze', 16)} Mermaid Diagram"])
     
     with tab1:
         st.write("**Interactive Mind Map Structure**")
@@ -451,7 +474,7 @@ def display_mind_map_tree(mind_map_data):
         return
     
     for i, theme in enumerate(themes):
-        with st.expander(f"🎯 {theme['name']}", expanded=False):
+        with st.expander(f"{get_svg_icon('target', 16)} {theme['name']}", expanded=False):
             # Theme summary with better formatting
             if theme.get('summary'):
                 st.markdown(f"**Summary:** {theme['summary']}")
@@ -464,7 +487,7 @@ def display_mind_map_tree(mind_map_data):
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.button(
-                    "💬 Discuss", 
+                    f"{get_svg_icon('discuss', 16)} Discuss", 
                     key=f"discuss_{theme['id']}_{i}",
                     help=f"Start a conversation about '{theme['name']}'",
                     on_click=discuss_theme_callback,
@@ -473,7 +496,7 @@ def display_mind_map_tree(mind_map_data):
                 )
             with col2:
                 st.button(
-                    "🔍 Analyze", 
+                    f"{get_svg_icon('analyze', 16)} Analyze", 
                     key=f"analyze_{theme['id']}_{i}",
                     help=f"Generate comprehensive analysis of '{theme['name']}'",
                     on_click=comprehensive_analysis_callback,
@@ -482,7 +505,7 @@ def display_mind_map_tree(mind_map_data):
                 )
             with col3:
                 st.button(
-                    "📊 Data", 
+                    f"{get_svg_icon('data', 16)} Data", 
                     key=f"data_{theme['id']}_{i}",
                     help=f"Extract specific data and facts about '{theme['name']}'",
                     on_click=extract_data_points_callback,
@@ -493,7 +516,7 @@ def display_mind_map_tree(mind_map_data):
             # Display sub-themes with improved formatting
             sub_themes = theme.get("sub_themes", [])
             if sub_themes:
-                st.markdown("### 🌳 Sub-topics:")
+                st.markdown(f"### {get_svg_icon('brain', 16)} Sub-topics:")
                 for j, sub_theme in enumerate(sub_themes):
                     with st.container():
                         # Create a nice card-like appearance for sub-themes
@@ -507,7 +530,7 @@ def display_mind_map_tree(mind_map_data):
                         col1, col2 = st.columns(2)
                         with col1:
                             st.button(
-                                "💬 Explore", 
+                                f"{get_svg_icon('explore', 16)} Explore", 
                                 key=f"explore_{theme['id']}_{j}_{i}",
                                 help=f"Deep dive into '{sub_theme['name']}'",
                                 on_click=explore_topic_callback,
@@ -516,7 +539,7 @@ def display_mind_map_tree(mind_map_data):
                             )
                         with col2:
                             st.button(
-                                "📋 Details", 
+                                f"{get_svg_icon('details', 16)} Details", 
                                 key=f"detail_{theme['id']}_{j}_{i}",
                                 help=f"Generate detailed notes for '{sub_theme['name']}'",
                                 on_click=generate_details_callback,
@@ -565,7 +588,7 @@ def generate_detailed_notes(topic_data):
             )
             
             if response["success"]:
-                st.success(f"📋 Detailed Notes: {topic_name}")
+                st.success(f"{get_svg_icon('details', 16)} Detailed Notes: {topic_name}", icon="✓")
                 st.write(response["content"])
             else:
                 st.error(f"Failed to generate notes: {response['error']}")
@@ -627,7 +650,7 @@ def extract_data_points(theme_data):
             )
             
             if response["success"]:
-                st.success(f"📊 Data Points: {theme_name}")
+                st.success(f"{get_svg_icon('data', 16)} Data Points: {theme_name}", icon="✓")
                 st.write(response["content"])
             else:
                 st.error(f"Failed to extract data points: {response['error']}")
@@ -747,7 +770,7 @@ def generate_fresh_summary():
 def generate_fresh_key_points():
     """Generate fresh key points analysis"""
     try:
-        with st.status("🎯 Extracting key points...", expanded=True) as status:
+        with st.status("Extracting key points...", expanded=True) as status:
             all_text = []
             
             for filename, doc_info in st.session_state.documents.items():
@@ -759,7 +782,7 @@ def generate_fresh_key_points():
                 return
             
             combined_text = "\n\n".join(all_text)
-            st.write("🔍 Identifying key insights and conclusions...")
+            st.write("Identifying key insights and conclusions...")
             
             response = st.session_state.ai_client.analyze_document(
                 combined_text[:15000],
@@ -1204,7 +1227,7 @@ with studio_col:
     with col1:
         st.markdown('<div class="panel-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16 10,8"/></svg> Studio</div>', unsafe_allow_html=True)
     with col2:
-        if st.button("🔄", help="Refresh all analyses"):
+        if st.button(f'{get_svg_icon("refresh", 16)} Refresh', help="Refresh all analyses", type="secondary"):
             st.session_state.cached_analyses = {}
             st.rerun()
     
@@ -1213,17 +1236,17 @@ with studio_col:
         st.markdown("**Generate Analysis**")
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("📝 Summary", use_container_width=True):
+            if st.button(f'{get_svg_icon("summary", 16)} Summary', use_container_width=True):
                 generate_document_summary()
                 st.rerun()
-            if st.button("🎯 Key Points", use_container_width=True):
+            if st.button(f'{get_svg_icon("target", 16)} Key Points', use_container_width=True):
                 extract_key_points()
                 st.rerun()
         with col2:
-            if st.button("🧠 Mind Map", use_container_width=True):
+            if st.button(f'{get_svg_icon("brain", 16)} Mind Map', use_container_width=True):
                 generate_mind_map()
                 st.rerun()
-            if st.button("📈 Sentiment", use_container_width=True):
+            if st.button(f'{get_svg_icon("chart", 16)} Sentiment', use_container_width=True):
                 analyze_sentiment()
                 st.rerun()
         
@@ -1236,7 +1259,7 @@ with studio_col:
             # Summary section
             summary_cache = get_cached_analysis("summary")
             if summary_cache:
-                with st.expander("📝 Document Summary", expanded=True):
+                with st.expander(f'{get_svg_icon("summary", 16)} Document Summary', expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     st.write(summary_cache["content"])
                 
@@ -1244,7 +1267,7 @@ with studio_col:
             # Key points section
             key_points_cache = get_cached_analysis("key_points")
             if key_points_cache:
-                with st.expander("🎯 Key Points", expanded=True):
+                with st.expander(f'{get_svg_icon("target", 16)} Key Points', expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     st.write(key_points_cache["content"])
                 
@@ -1252,7 +1275,7 @@ with studio_col:
             # Sentiment section
             sentiment_cache = get_cached_analysis("sentiment")
             if sentiment_cache:
-                with st.expander("📈 Sentiment Analysis", expanded=True):
+                with st.expander(f'{get_svg_icon("chart", 16)} Sentiment Analysis', expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     st.write(sentiment_cache["content"])
                 
@@ -1260,25 +1283,36 @@ with studio_col:
             # Mind map section
             mindmap_cache = get_cached_analysis("mind_map")
             if mindmap_cache:
-                with st.expander("🧠 Mind Map", expanded=True):
+                with st.expander(f'{get_svg_icon("brain", 16)} Mind Map', expanded=True):
                     st.markdown('<div class="analysis-result">', unsafe_allow_html=True)
                     display_mind_map_results(mindmap_cache["content"])
                 
         
     else:
         st.info("Upload documents to start analyzing!")
-        st.markdown("""
-        **Welcome to AI Document Analyzer!**
+        st.markdown("**Welcome to AI Document Analyzer!**")
+        st.markdown("**What you can do:**")
         
-        **What you can do:**
+        # Feature list with SVG icons
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; margin: 8px 0;">
+            <span style="margin-right: 8px;">{get_svg_icon("search", 16)}</span>
+            <strong>Analyze Documents:</strong> Extract summaries, key points, and insights
+        </div>
+        <div style="display: flex; align-items: center; margin: 8px 0;">
+            <span style="margin-right: 8px;">{get_svg_icon("brain", 16)}</span>
+            <strong>Generate Mind Maps:</strong> Visual representations of document content
+        </div>
+        <div style="display: flex; align-items: center; margin: 8px 0;">
+            <span style="margin-right: 8px;">{get_svg_icon("chat", 16)}</span>
+            <strong>Chat with Documents:</strong> Ask questions and get contextual answers
+        </div>
+        <div style="display: flex; align-items: center; margin: 8px 0;">
+            <span style="margin-right: 8px;">{get_svg_icon("users", 16)}</span>
+            <strong>Multiple AI Personalities:</strong> Specialized perspectives
+        </div>
+        """, unsafe_allow_html=True)
         
-        🔍 **Analyze Documents**: Extract summaries, key points, and insights  
-        🧠 **Generate Mind Maps**: Visual representations of document content  
-        💬 **Chat with Documents**: Ask questions and get contextual answers  
-        🎭 **Multiple AI Personalities**: Specialized perspectives  
-        
-        **Supported formats**: PDF, Word documents, Plain text
-        
-        Upload your documents using the Sources section to begin!
-        """)
+        st.markdown("**Supported formats**: PDF, Word documents, Plain text")
+        st.markdown("Upload your documents using the Sources section to begin!")
     
