@@ -1070,7 +1070,7 @@ with sources_col:
     st.markdown("---")
     
     # AI Settings
-    st.markdown("**<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 8v6m11-12h-6M7 12H1m11-7.07L9.17 7.05M14.83 16.95L16.95 14.83M16.95 9.17L14.83 7.05M9.17 16.95L7.05 14.83"/></svg> Settings**", unsafe_allow_html=True)
+    st.markdown("**⚙️ Settings**", unsafe_allow_html=True)
     
     # Model selection
     available_models = st.session_state.ai_client.available_models
