@@ -965,99 +965,163 @@ def generate_mind_map():
     
     generate_fresh_mind_map()
 
-# Main application layout
-st.title("🤖 AI Document Analyzer & Chat")
-st.markdown("*A NotebookLM-inspired document analysis tool with AI-powered conversations*")
+# Custom CSS for the layout
+st.markdown("""
+<style>
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 100%;
+    }
+    .sources-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .chat-section {
+        background-color: #ffffff;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .studio-section {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 60vh;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    .analysis-card {
+        background-color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 1rem;
+    }
+    .section-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# Sidebar for settings and document management
-with st.sidebar:
-    st.header("📁 Document Management")
-    upload_document()
-    
-    st.markdown("---")
-    display_documents()
-    
-    st.markdown("---")
-    
-    # AI Settings
-    st.header("🤖 AI Settings")
-    
-    # Model selection
-    available_models = st.session_state.ai_client.available_models
-    if available_models:
-        current_model_key = None
-        for key, value in available_models.items():
-            if value == st.session_state.ai_client.current_model:
-                current_model_key = key
-                break
+# Main three-column layout
+sources_col, chat_col, studio_col = st.columns([1, 2, 2])
+
+# SOURCES COLUMN (Left)
+with sources_col:
+    with st.container():
+        st.markdown('<div class="sources-section">', unsafe_allow_html=True)
         
-        if current_model_key:
-            model_options = list(available_models.keys())
-            current_index = model_options.index(current_model_key)
+        # Sources header with collapse functionality
+        sources_expanded = st.checkbox("📁 Sources", value=True)
+        
+        if sources_expanded:
+            # Document upload
+            st.markdown("### Add Documents")
+            upload_document()
             
-            selected_model = st.selectbox(
-                "AI Model",
-                options=model_options,
-                index=current_index,
-                help="Choose the AI model for analysis and chat"
+            st.markdown("---")
+            
+            # Document list
+            st.markdown("### Documents")
+            display_documents()
+            
+            st.markdown("---")
+            
+            # AI Settings
+            st.markdown("### ⚙️ Settings")
+            
+            # Model selection
+            available_models = st.session_state.ai_client.available_models
+            if available_models:
+                current_model_key = None
+                for key, value in available_models.items():
+                    if value == st.session_state.ai_client.current_model:
+                        current_model_key = key
+                        break
+                
+                if current_model_key:
+                    model_options = list(available_models.keys())
+                    current_index = model_options.index(current_model_key)
+                    
+                    selected_model = st.selectbox(
+                        "AI Model",
+                        options=model_options,
+                        index=current_index,
+                        help="Choose the AI model"
+                    )
+                    
+                    if selected_model != current_model_key:
+                        if st.session_state.ai_client.set_model(selected_model):
+                            st.success(f"Switched to {selected_model}")
+                        else:
+                            st.error(f"Failed to switch to {selected_model}")
+            
+            # Personality selection
+            personalities = st.session_state.ai_client.get_available_personalities()
+            personality_options = list(personalities.keys())
+            
+            current_personality_index = personality_options.index(st.session_state.ai_client.current_personality)
+            
+            selected_personality = st.selectbox(
+                "AI Personality",
+                options=personality_options,
+                format_func=lambda x: personalities[x]["name"],
+                index=current_personality_index,
+                help="Choose AI personality"
             )
             
-            if selected_model != current_model_key:
-                if st.session_state.ai_client.set_model(selected_model):
-                    st.success(f"Switched to {selected_model}")
+            if selected_personality != st.session_state.ai_client.current_personality:
+                if st.session_state.ai_client.set_personality(selected_personality):
+                    st.success(f"Switched to {personalities[selected_personality]['name']}")
+                    st.session_state.cached_analyses = {}
                 else:
-                    st.error(f"Failed to switch to {selected_model}")
-    
-    # Personality selection
-    personalities = st.session_state.ai_client.get_available_personalities()
-    personality_options = list(personalities.keys())
-    personality_names = [personalities[key]["name"] for key in personality_options]
-    
-    current_personality_index = personality_options.index(st.session_state.ai_client.current_personality)
-    
-    selected_personality = st.selectbox(
-        "AI Personality",
-        options=personality_options,
-        format_func=lambda x: personalities[x]["name"],
-        index=current_personality_index,
-        help="Choose AI personality for specialized analysis perspectives"
-    )
-    
-    if selected_personality != st.session_state.ai_client.current_personality:
-        if st.session_state.ai_client.set_personality(selected_personality):
-            st.success(f"Switched to {personalities[selected_personality]['name']}")
-            # Clear caches when personality changes
-            st.session_state.cached_analyses = {}
-        else:
-            st.error(f"Failed to switch personality")
-    
-    # Display current AI info
-    ai_info = st.session_state.ai_client.get_service_info()
-    st.info(f"**Provider**: {ai_info['provider']}\n**Status**: {ai_info['api_key_status']}")
-    
-    st.markdown("---")
-    
-    # Clear chat history
-    if st.button("🗑️ Clear Chat History"):
-        clear_persistent_chat()
-        st.success("Chat history cleared!")
-
-# Main content area
-if st.session_state.documents:
-    # Create two-column layout: Chat on left, Analysis on right
-    chat_col, analysis_col = st.columns([1, 1])
-    
-    with chat_col:
-        st.header("💬 AI-Powered Document Chat")
+                    st.error(f"Failed to switch personality")
+            
+            # Clear chat button
+            if st.button("🗑️ Clear Chat", use_container_width=True):
+                clear_persistent_chat()
+                st.success("Chat cleared!")
         
-        # Display chat history
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# CHAT COLUMN (Middle)
+with chat_col:
+    with st.container():
+        st.markdown('<div class="chat-section">', unsafe_allow_html=True)
+        
+        st.markdown('<div class="section-header">💬 Chat</div>', unsafe_allow_html=True)
+        
+        # Initialize chat messages
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         
-        # Chat container with fixed height for scrolling
-        chat_container = st.container()
-        with chat_container:
-            # Chat interface
+        # Chat messages container (scrollable)
+        st.markdown('<div class="chat-messages">', unsafe_allow_html=True)
+        
+        if st.session_state.documents:
+            # Display chat history
             for i, message in enumerate(st.session_state.chat_messages):
                 if message["role"] == "user":
                     with st.chat_message("user"):
@@ -1065,86 +1129,140 @@ if st.session_state.documents:
                 else:
                     with st.chat_message("assistant"):
                         st.write(message["message"])
-        
-        # Chat input
-        user_question = st.chat_input("Ask a question about your documents...")
-        
-        if user_question:
-            # Add user message to chat
-            st.session_state.chat_messages.append({"role": "user", "message": user_question})
             
-            # Display user message
-            with st.chat_message("user"):
-                st.write(user_question)
+            st.markdown('</div>', unsafe_allow_html=True)
             
-            # Get relevant context from documents
-            with st.spinner("🤖 Thinking..."):
-                # Use vector store to find relevant chunks
-                results = st.session_state.vector_store.search(user_question)
+            # Chat input at bottom
+            user_question = st.chat_input("Ask a question about your documents...")
+            
+            if user_question:
+                # Add user message to chat
+                st.session_state.chat_messages.append({"role": "user", "message": user_question})
                 
-                if results:
-                    context = "\n\n".join([result["chunk"]["text"] for result in results[:3]])
-                else:
-                    # Fallback: use first chunk of each document
-                    context_parts = []
-                    for filename, doc_info in st.session_state.documents.items():
-                        if doc_info["success"] and doc_info["chunks"]:
-                            context_parts.append(doc_info["chunks"][0]["text"])
-                    context = "\n\n".join(context_parts)
-                
-                # Get AI response
-                response = st.session_state.ai_client.chat_with_document(
-                    user_question,
-                    context,
-                    max_tokens=1000
-                )
-                
-                # Display AI response
-                with st.chat_message("assistant"):
+                # Get relevant context from documents
+                with st.spinner("🤖 Thinking..."):
+                    # Use vector store to find relevant chunks
+                    results = st.session_state.vector_store.search(user_question)
+                    
+                    if results:
+                        context = "\n\n".join([result["chunk"]["text"] for result in results[:3]])
+                    else:
+                        # Fallback: use first chunk of each document
+                        context_parts = []
+                        for filename, doc_info in st.session_state.documents.items():
+                            if doc_info["success"] and doc_info["chunks"]:
+                                context_parts.append(doc_info["chunks"][0]["text"])
+                        context = "\n\n".join(context_parts)
+                    
+                    # Get AI response
+                    response = st.session_state.ai_client.chat_with_document(
+                        user_question,
+                        context,
+                        max_tokens=1000
+                    )
+                    
+                    # Add response to chat
                     if response["success"]:
                         ai_message = response["content"]
-                        st.write(ai_message)
-                        
-                        # Add to chat history
                         st.session_state.chat_messages.append({"role": "assistant", "message": ai_message})
-                        
-                        # Save chat history
                         save_chat_history()
+                        st.rerun()
                     else:
                         error_message = f"Sorry, I encountered an error: {response['error']}"
-                        st.error(error_message)
                         st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
-    
-    with analysis_col:
-        st.header("🔍 Document Analysis")
+                        st.rerun()
+        else:
+            st.markdown('</div>', unsafe_allow_html=True)
+            st.write("Upload documents to start chatting!")
         
-        # Analysis buttons in a more compact layout
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📝 Generate Summary", use_container_width=True):
-                generate_document_summary()
-            if st.button("📈 Analyze Sentiment", use_container_width=True):
-                analyze_sentiment()
-        
-        with col2:
-            if st.button("🎯 Extract Key Points", use_container_width=True):
-                extract_key_points()
-            if st.button("🧠 Generate Mind Map", use_container_width=True):
-                generate_mind_map()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-else:
-    st.info("👆 Upload some documents to get started!")
-    st.markdown("""
-    ### Welcome to AI Document Analyzer & Chat!
-    
-    This tool helps you:
-    
-    🔍 **Analyze Documents**: Extract summaries, key points, and insights  
-    🧠 **Generate Mind Maps**: Visual representations of document content  
-    💬 **Chat with Documents**: Ask questions and get contextual answers  
-    🎭 **Multiple AI Personalities**: Specialized perspectives (Academic, Business, Legal, etc.)  
-    
-    **Supported formats**: PDF, Word documents (.docx, .doc), Plain text (.txt)
-    
-    Upload your documents using the sidebar to begin!
-    """)
+# STUDIO COLUMN (Right) 
+with studio_col:
+    with st.container():
+        st.markdown('<div class="studio-section">', unsafe_allow_html=True)
+        
+        # Studio header
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown('<div class="section-header">🎬 Studio</div>', unsafe_allow_html=True)
+        with col2:
+            if st.button("🔄", help="Refresh all analyses"):
+                st.session_state.cached_analyses = {}
+                st.rerun()
+        
+        if st.session_state.documents:
+            # Analysis buttons in a grid
+            st.markdown("### Generate Analysis")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📝 Summary", use_container_width=True):
+                    generate_document_summary()
+                    st.rerun()
+                if st.button("🎯 Key Points", use_container_width=True):
+                    extract_key_points()
+                    st.rerun()
+            with col2:
+                if st.button("🧠 Mind Map", use_container_width=True):
+                    generate_mind_map()
+                    st.rerun()
+                if st.button("📈 Sentiment", use_container_width=True):
+                    analyze_sentiment()
+                    st.rerun()
+            
+            st.markdown("---")
+            
+            # Display cached analyses
+            if st.session_state.cached_analyses:
+                st.markdown("### Analysis Results")
+                
+                # Summary section
+                summary_cache = get_cached_analysis("summary")
+                if summary_cache:
+                    with st.expander("📝 Document Summary", expanded=True):
+                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
+                        st.write(summary_cache["content"])
+                        st.markdown('</div>', unsafe_allow_html=True)
+                
+                # Key points section
+                key_points_cache = get_cached_analysis("key_points")
+                if key_points_cache:
+                    with st.expander("🎯 Key Points", expanded=True):
+                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
+                        st.write(key_points_cache["content"])
+                        st.markdown('</div>', unsafe_allow_html=True)
+                
+                # Sentiment section
+                sentiment_cache = get_cached_analysis("sentiment")
+                if sentiment_cache:
+                    with st.expander("📈 Sentiment Analysis", expanded=True):
+                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
+                        st.write(sentiment_cache["content"])
+                        st.markdown('</div>', unsafe_allow_html=True)
+                
+                # Mind map section
+                mindmap_cache = get_cached_analysis("mind_map")
+                if mindmap_cache:
+                    with st.expander("🧠 Mind Map", expanded=True):
+                        st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
+                        display_mind_map_results(mindmap_cache["content"])
+                        st.markdown('</div>', unsafe_allow_html=True)
+            
+        else:
+            st.info("Upload documents to start analyzing!")
+            st.markdown("""
+            ### Welcome to AI Document Analyzer!
+            
+            **What you can do:**
+            
+            🔍 **Analyze Documents**: Extract summaries, key points, and insights  
+            🧠 **Generate Mind Maps**: Visual representations of document content  
+            💬 **Chat with Documents**: Ask questions and get contextual answers  
+            🎭 **Multiple AI Personalities**: Specialized perspectives  
+            
+            **Supported formats**: PDF, Word documents, Plain text
+            
+            Upload your documents using the Sources section to begin!
+            """)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
