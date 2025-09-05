@@ -11,3 +11,4 @@ python-levenshtein>=0.21.0
 google-generativeai
 networkx
 pyvis
+dataclasses
