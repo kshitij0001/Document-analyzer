@@ -1,302 +1,193 @@
 # -*- coding: utf-8 -*-
 
-# Mind Map Generator Module for Streamlit
-# Based on https://github.com/Dicklesworthstone/mindmap-generator
-# Adapted to work with existing OpenRouter API integration
+# NotebookLM-Style Mind Map Generator for Streamlit
+# Enhanced version with interactive visualizations and modern UI
 
 import json
 import re
 import time
+import uuid
 from typing import Dict, List, Optional, Any, Tuple
 import streamlit as st
+import networkx as nx
+from dataclasses import dataclass
+import hashlib
 
-# SVG Icon Component Function
-def get_svg_icon(icon_name, size=16, color="currentColor"):
-    """Generate SVG icons to replace emojis"""
-    icons = {
-        "refresh": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
-        "rocket": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"></path><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"></path></svg>',
-        "check": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
-        "warning": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
-        "info": f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><ellipse cx="12" cy="5" rx="3" ry="3"></ellipse><path d="m2 13 20 6-6-20A20 20 0 0 0 2 13"></path><path d="M20 2c-4.6 5.5-6.3 11.2-5 17"></path></svg>'
-    }
-    return icons.get(icon_name, f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>')
-
-# Try to import fuzzywuzzy, use simple fallback if not available
+# Try to import visualization libraries
 try:
-    from fuzzywuzzy import fuzz
-    FUZZYWUZZY_AVAILABLE = True
+    import plotly.graph_objects as go
+    import plotly.express as px
+    from plotly.subplots import make_subplots
+    PLOTLY_AVAILABLE = True
 except ImportError:
-    FUZZYWUZZY_AVAILABLE = False
-    # Simple fallback similarity function
-    def fuzz_ratio(a, b):
-        """Simple similarity ratio fallback"""
-        a, b = a.lower().strip(), b.lower().strip()
-        if a == b:
-            return 100
-        if a in b or b in a:
-            return 80
-        # Count common words
-        words_a = set(a.split())
-        words_b = set(b.split())
-        if not words_a or not words_b:
-            return 0
-        common = len(words_a.intersection(words_b))
-        total = len(words_a.union(words_b))
-        return int((common / total) * 100) if total > 0 else 0
+    PLOTLY_AVAILABLE = False
+    go = None
+    px = None
 
-class MindMapGenerator:
+try:
+    import pyvis.network as net
+    PYVIS_AVAILABLE = True
+except ImportError:
+    PYVIS_AVAILABLE = False
+
+@dataclass
+class MindMapNode:
+    """Represents a node in the mind map"""
+    id: str
+    name: str
+    summary: str
+    level: int
+    parent_id: Optional[str] = None
+    children: Optional[List[str]] = None
+    node_type: str = "topic"  # topic, subtopic, detail
+    importance: float = 0.5  # 0-1 scale
+    keywords: Optional[List[str]] = None
+    
+    def __post_init__(self):
+        if self.children is None:
+            self.children = []
+        if self.keywords is None:
+            self.keywords = []
+
+class NotebookLMMindMapGenerator:
     """
-    Generate sophisticated mind maps from document content using AI analysis.
-    Adapted from the Dicklesworthstone/mindmap-generator project for Streamlit integration.
+    NotebookLM-style mind map generator with interactive visualizations
     """
     
     def __init__(self, ai_client):
-        """Initialize with the existing AI client."""
+        """Initialize with AI client"""
         self.ai_client = ai_client
-        self.similarity_threshold = 75  # For detecting duplicates
-        
-        # Set up similarity function
-        if FUZZYWUZZY_AVAILABLE:
-            self.similarity_func = fuzz.ratio
-        else:
-            self.similarity_func = fuzz_ratio
+        self.nodes = {}
+        self.edges = []
+        self.max_depth = 3
+        self.color_palette = {
+            0: "#FF6B6B",  # Red for main topics
+            1: "#4ECDC4",  # Teal for subtopics  
+            2: "#45B7D1",  # Blue for details
+            3: "#96CEB4"   # Green for specifics
+        }
     
-    def generate_mind_map(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
+    def generate_mind_map(self, document_text: str, document_titles: Optional[List[str]] = None) -> Dict[str, Any]:
         """
-        Generate a comprehensive mind map from document content using optimized single API call.
+        Generate a comprehensive mind map from document content
         
         Args:
             document_text (str): The combined document content
             document_titles (List[str]): List of document titles for context
             
         Returns:
-            Dict: Complete mind map data structure
+            Dict: Complete mind map data structure with nodes and visualization data
         """
         if not document_text.strip():
             return {"error": "No document content provided"}
         
         try:
-            with st.status("Generating mind map (optimized)...", expanded=True) as status:
-                st.write("Creating comprehensive mind map structure...")
+            with st.status("🧠 Generating NotebookLM-style mind map...", expanded=True) as status:
                 
-                # Generate complete mind map in ONE API call instead of 50+
-                mind_map_data = self._generate_complete_mind_map(document_text, document_titles)
+                # Step 1: Extract structured data
+                st.write("🔍 Analyzing document structure...")
+                structured_data = self._extract_structured_data(document_text, document_titles)
                 
-                if mind_map_data and "themes" in mind_map_data:
-                    st.write(f"Generated {len(mind_map_data['themes'])} themes with subtopics")
-                    status.update(label="Mind map completed in seconds!", state="complete")
-                    return mind_map_data
-                else:
-                    # Fallback to original method if optimized version fails
-                    st.write("Falling back to detailed analysis...")
-                    return self._generate_mind_map_fallback(document_text, document_titles)
-                    
+                if not structured_data or "error" in structured_data:
+                    return {"error": "Failed to extract structured data from document"}
+                
+                # Step 2: Build node graph
+                st.write("🌐 Building knowledge graph...")
+                self._build_node_graph(structured_data)
+                
+                # Step 3: Generate visualizations
+                st.write("🎨 Creating interactive visualizations...")
+                visualizations = self._generate_visualizations()
+                
+                # Step 4: Prepare final data structure
+                mind_map_data = {
+                    "title": structured_data.get("title", "Document Mind Map"),
+                    "nodes": {node_id: self._node_to_dict(node) for node_id, node in self.nodes.items()},
+                    "edges": self.edges,
+                    "visualizations": visualizations,
+                    "statistics": self._generate_statistics(),
+                    "export_formats": ["json", "markdown", "mermaid", "graphml"]
+                }
+                
+                st.write(f"✅ Generated mind map with {len(self.nodes)} nodes and {len(self.edges)} connections")
+                status.update(label="✅ Mind map generation complete!", state="complete")
+                
+                return mind_map_data
+                
         except Exception as e:
             st.error(f"Error generating mind map: {str(e)}")
             return {"error": str(e)}
-
-    def _extract_main_themes(self, document_text: str, document_titles: List[str] = None) -> List[Dict[str, str]]:
-        """Extract main themes from the document using AI analysis."""
-        context_info = ""
-        if document_titles:
-            context_info = f"Documents being analyzed: {', '.join(document_titles)}\n\n"
-        
-        prompt = f"""Analyze the following document(s) and identify 4-7 main themes or topics that capture the core content and structure.
-
-{context_info}For each theme, provide:
-1. A concise name (2-5 words)
-2. A brief summary (1-2 sentences)
-
-Return your response as a JSON array with this exact format:
-[
-{{"name": "Theme Name", "summary": "Brief description of what this theme covers"}},
-{{"name": "Another Theme", "summary": "Description of this theme"}}
-]
-
-Document content:
-{document_text[:4000]}"""  # Limit to prevent token overflow
-        
-        try:
-            response = self.ai_client._make_api_request(
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=1000,
-                temperature=0.3
-            )
-            
-            if response["success"]:
-                # Try to parse JSON response
-                content = response["content"].strip()
-                # Extract JSON from response if it's wrapped in text
-                json_match = re.search(r'\[.*\]', content, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group()
-                    themes = json.loads(json_str)
-                    # Validate structure
-                    valid_themes = []
-                    for theme in themes:
-                        if isinstance(theme, dict) and "name" in theme and "summary" in theme:
-                            valid_themes.append(theme)
-                    return valid_themes
-                
-                # Fallback: extract themes from text response
-                return self._fallback_theme_extraction(response.get("content", ""))
-                
-        except Exception as e:
-            st.warning(f"AI theme extraction failed: {e}")
-            return self._fallback_theme_extraction(document_text)
-
-    def _extract_subtopics(self, document_text: str, theme: Dict[str, str]) -> List[Dict[str, str]]:
-        """Extract subtopics for a specific theme."""
-        prompt = f"""Based on the document content, identify 3-6 specific subtopics that fall under the theme: "{theme['name']}"
-
-Theme description: {theme['summary']}
-
-For each subtopic, provide:
-1. A specific name (2-4 words)
-2. A brief summary explaining what this subtopic covers
-
-Return as JSON array:
-[
-{{"name": "Subtopic Name", "summary": "What this subtopic covers"}},
-{{"name": "Another Subtopic", "summary": "Description"}}
-]
-
-Focus only on content that relates to: {theme['name']}
-
-Document content:
-{document_text[:3000]}"""
-
-        try:
-            response = self.ai_client._make_api_request(
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=800,
-                temperature=0.3
-            )
-            
-            if response["success"]:
-                content = response["content"].strip()
-                json_match = re.search(r'\[.*\]', content, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group()
-                    subtopics = json.loads(json_str)
-                    valid_subtopics = []
-                    for subtopic in subtopics:
-                        if isinstance(subtopic, dict) and "name" in subtopic and "summary" in subtopic:
-                            valid_subtopics.append(subtopic)
-                    return valid_subtopics[:6]  # Limit to 6 subtopics
-                    
-            # Fallback
-            return [{"name": f"{theme['name']} Details", "summary": f"Key details about {theme['name']}"}]
-            
-        except Exception:
-            return [{"name": f"{theme['name']} Analysis", "summary": f"Analysis of {theme['name']}"}]
-
-    def _extract_details(self, document_text: str, theme: Dict[str, str], subtopic: Dict[str, str]) -> List[Dict[str, str]]:
-        """Extract specific details for a subtopic."""
-        prompt = f"""Find 2-4 specific details, findings, or key points related to the subtopic "{subtopic['name']}" within the theme "{theme['name']}".
-
-Subtopic focus: {subtopic['summary']}
-
-Return as JSON array with specific, actionable details:
-[
-{{"name": "Specific Detail", "summary": "Explanation of this detail"}},
-{{"name": "Key Finding", "summary": "What this finding means"}}
-]
-
-Document content:
-{document_text[:2000]}"""
-
-        try:
-            response = self.ai_client._make_api_request(
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=600,
-                temperature=0.3
-            )
-            
-            if response["success"]:
-                content = response["content"].strip()
-                json_match = re.search(r'\[.*\]', content, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group()
-                    details = json.loads(json_str)
-                    valid_details = []
-                    for detail in details:
-                        if isinstance(detail, dict) and "name" in detail and "summary" in detail:
-                            valid_details.append(detail)
-                    return valid_details[:4]  # Limit to 4 details
-                    
-            return []  # Return empty if no valid details found
-            
-        except Exception:
-            return []
-
-    def _generate_complete_mind_map(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
-        """FIXED: Generate complete mind map structure with enhanced large document support."""
+    
+    def _extract_structured_data(self, document_text: str, document_titles: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+        """Extract structured data using advanced AI analysis"""
         
         context_info = ""
         if document_titles:
-            context_info = f"Analyzing: {', '.join(document_titles)}\n\n"
+            context_info = f"Document(s): {', '.join(document_titles)}\n\n"
         
-        # Enhanced document processing for large files
-        max_content_length = 15000  # Increased from 8000
-        
+        # Handle large documents with intelligent sampling
+        max_content_length = 20000
         if len(document_text) > max_content_length:
-            st.info(f"Large document detected ({len(document_text):,} characters). Using intelligent sampling...", icon="ℹ️")
-            
-            # Intelligent sampling strategy
-            sample_size = max_content_length // 4
-            samples = []
-            
-            # Strategic samples from different parts
-            samples.append(document_text[:sample_size])  # Beginning
-            samples.append(document_text[len(document_text)//4:len(document_text)//4 + sample_size])  # Quarter
-            samples.append(document_text[len(document_text)//2:len(document_text)//2 + sample_size])  # Middle  
-            samples.append(document_text[-sample_size:])  # End
-            
-            processed_text = "\n\n[DOCUMENT SECTION]\n\n".join(samples)
+            st.info(f"📄 Large document detected ({len(document_text):,} characters). Using intelligent sampling...")
+            processed_text = self._intelligent_document_sampling(document_text, max_content_length)
         else:
             processed_text = document_text
         
-        # Enhanced prompt with clearer instructions
-        prompt = f"""Analyze the document content and create a detailed mind map structure.
+        # Enhanced prompt for better structure extraction
+        prompt = f"""You are an expert knowledge analyst. Analyze the document content and create a comprehensive knowledge structure.
 
-IMPORTANT: Return ONLY the JSON object, no explanations.
+Generate a JSON response with this EXACT format:
 
 {{
-  "title": "Document Mind Map",
-  "themes": [
+  "title": "Document Knowledge Map",
+  "main_themes": [
     {{
-      "id": "theme_1", 
-      "name": "Theme Name",
-      "summary": "Brief description",
-      "sub_themes": [
+      "id": "theme_1",
+      "name": "Theme Name (max 40 chars)",
+      "summary": "2-3 sentence summary of this theme",
+      "importance": 0.9,
+      "keywords": ["keyword1", "keyword2", "keyword3"],
+      "subtopics": [
         {{
           "id": "theme_1_sub_1",
-          "name": "Subtopic Name",
-          "summary": "Brief description", 
-          "sub_themes": []
+          "name": "Subtopic Name (max 30 chars)",
+          "summary": "1-2 sentence explanation",
+          "importance": 0.7,
+          "keywords": ["word1", "word2"],
+          "details": [
+            {{
+              "id": "theme_1_sub_1_det_1", 
+              "name": "Specific Detail (max 25 chars)",
+              "summary": "Brief explanation",
+              "importance": 0.5
+            }}
+          ]
         }}
       ]
     }}
+  ],
+  "connections": [
+    {{"from": "theme_1", "to": "theme_2", "relationship": "relates_to", "strength": 0.6}}
   ]
 }}
 
 Instructions:
-- Create 4-6 main themes based on actual document content
-- Each theme should have 2-4 meaningful subtopics
-- Keep names under 40 characters
-- Keep summaries under 100 characters
-- Ensure perfect JSON syntax
+- Generate 4-6 main themes based on actual content
+- Each theme should have 2-4 meaningful subtopics  
+- Each subtopic can have 1-3 specific details
+- Importance scores: 0.9+ (critical), 0.7+ (important), 0.5+ (relevant)
+- Keywords should be actual terms from the document
+- Connections show relationships between themes
+- Return ONLY valid JSON, no explanations
 
 {context_info}Document Content:
 {processed_text}"""
 
-        # Multiple attempts with progressive parameters
+        # Multiple attempts with different parameters
         for attempt in range(3):
             try:
-                temperature = 0.05 + (attempt * 0.05)
-                max_tokens = 4000 + (attempt * 500)
+                temperature = 0.1 + (attempt * 0.1)
+                max_tokens = 5000 + (attempt * 1000)
                 
                 response = self.ai_client._make_api_request(
                     messages=[{"role": "user", "content": prompt}],
@@ -305,59 +196,87 @@ Instructions:
                 )
                 
                 if response["success"]:
-                    content = response["content"].strip()
-                    mind_map = self._process_json_response(content, attempt + 1)
-                    if mind_map:
-                        return mind_map
+                    structured_data = self._process_structured_response(response["content"])
+                    if structured_data:
+                        return structured_data
                         
             except Exception as e:
                 st.warning(f"Attempt {attempt + 1} failed: {str(e)}")
                 continue
         
         # Fallback method
-        st.warning("Optimized generation failed, using fallback method...", icon="⚠")
-        return self._generate_mind_map_fallback(document_text, document_titles)
-
-    def _process_json_response(self, content: str, attempt_num: int) -> Dict[str, Any]:
-        """Process JSON response with multiple repair strategies"""
+        return self._fallback_structure_extraction(document_text, document_titles)
+    
+    def _intelligent_document_sampling(self, document_text: str, max_length: int) -> str:
+        """Intelligent sampling for large documents"""
         
-        # Strategy 1: Clean and direct parse
-        try:
-            cleaned_content = self._enhanced_json_cleaning(content)
-            mind_map = json.loads(cleaned_content)
-            if self._validate_and_fix_mind_map_structure(mind_map):
-                return mind_map
-        except:
-            pass
+        # Strategy: Take samples from different parts to capture full context
+        sample_size = max_length // 5
+        samples = []
         
-        # Strategy 2: Aggressive repair
+        # Beginning (introduction/overview)
+        samples.append(document_text[:sample_size])
+        
+        # Distributed samples from middle sections
+        doc_length = len(document_text)
+        for i in range(1, 4):
+            start_pos = (doc_length * i) // 4
+            end_pos = start_pos + sample_size
+            samples.append(document_text[start_pos:end_pos])
+        
+        # End (conclusions/summary)
+        samples.append(document_text[-sample_size:])
+        
+        return "\n\n[DOCUMENT SECTION BREAK]\n\n".join(samples)
+    
+    def _process_structured_response(self, content: str) -> Dict[str, Any]:
+        """Process and validate structured response from AI"""
+        
         try:
-            repaired_content = self._aggressive_json_repair(content)
+            # Clean the content
+            cleaned_content = self._clean_json_response(content)
+            
+            # Parse JSON
+            data = json.loads(cleaned_content)
+            
+            # Validate structure
+            if self._validate_structured_data(data):
+                return data
+            else:
+                return {"error": "Failed to validate structured data"}
+                
+        except json.JSONDecodeError as e:
+            st.warning(f"JSON parsing error: {e}")
+            # Try aggressive cleaning
+            repaired_content = self._repair_json_content(content)
             if repaired_content:
-                mind_map = json.loads(repaired_content)
-                if self._validate_and_fix_mind_map_structure(mind_map):
-                    return mind_map
-        except:
-            pass
+                try:
+                    data = json.loads(repaired_content)
+                    if self._validate_structured_data(data):
+                        return data
+                except:
+                    pass
+            return {"error": "JSON processing failed"}
+        except Exception as e:
+            st.warning(f"Structure processing error: {e}")
+            return {"error": f"Structure processing error: {e}"}
+    
+    def _clean_json_response(self, content: str) -> str:
+        """Clean AI response to extract valid JSON"""
         
-        return None
-
-    def _enhanced_json_cleaning(self, content: str) -> str:
-        """Enhanced JSON cleaning with better error handling"""
-        # Remove code blocks
-        content = re.sub(r'```(?:json)?\s*', '', content, flags=re.IGNORECASE)
-        content = re.sub(r'```\s*$', '', content, flags=re.MULTILINE)
+        # Remove markdown code blocks
+        content = re.sub(r'```json\s*', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'```\s*', '', content)
         
-        # Find JSON boundaries accurately  
+        # Find JSON boundaries
         start_idx = content.find('{')
-        if start_idx > 0:
-            content = content[start_idx:]
+        if start_idx == -1:
+            raise ValueError("No JSON object found")
         
-        # Balance braces
+        # Find matching closing brace
         brace_count = 0
         end_idx = -1
-        
-        for i, char in enumerate(content):
+        for i, char in enumerate(content[start_idx:], start_idx):
             if char == '{':
                 brace_count += 1
             elif char == '}':
@@ -366,291 +285,625 @@ Instructions:
                     end_idx = i
                     break
         
-        if end_idx != -1:
-            content = content[:end_idx + 1]
+        if end_idx == -1:
+            raise ValueError("Unmatched JSON braces")
         
-        # Fix common JSON issues
-        content = re.sub(r',\s*([}\]])', r'\1', content)  # Trailing commas
-        content = re.sub(r'"([^"]*)"([^",:}\]]*)"', r'"\1\2"', content)  # Broken quotes
+        return content[start_idx:end_idx + 1]
+    
+    def _repair_json_content(self, content: str) -> Optional[str]:
+        """Attempt to repair malformed JSON"""
         
-        return content.strip()
-
-    def _aggressive_json_repair(self, content: str) -> str:
-        """More aggressive JSON repair for malformed content"""
-        
-        # Remove everything before first {
-        start_idx = content.find('{')
-        if start_idx > 0:
-            content = content[start_idx:]
-        
-        # Remove everything after last }
-        end_idx = content.rfind('}')
-        if end_idx != -1:
-            content = content[:end_idx + 1]
-        
-        # Apply multiple repair patterns
-        repairs = [
-            (r'"([^"]*)"([^",:}\]]*)"([^",:}\]]*)"', r'"\1\2\3"'),  # Fix broken quotes
-            (r',\s*([}\]])', r'\1'),  # Remove trailing commas
-            (r'([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*):',  r'\1"\2":'),  # Quote unquoted keys
-        ]
-        
-        for pattern, replacement in repairs:
-            content = re.sub(pattern, replacement, content)
-        
-        return content
-
-    def _clean_json_response(self, content: str) -> str:
-        """Clean AI response to extract valid JSON."""
-        # Remove markdown code blocks
-        content = re.sub(r'```json\s*', '', content)
-        content = re.sub(r'```\s*', '', content)
-        
-        # Remove any text before first {
-        start_idx = content.find('{')
-        if start_idx > 0:
-            content = content[start_idx:]
-        
-        # Remove any text after last }
-        end_idx = content.rfind('}')
-        if end_idx != -1:
-            content = content[:end_idx + 1]
-        
-        return content.strip()
-
-    def _fix_json_issues(self, json_str: str) -> str:
-        """Fix common JSON formatting issues."""
-        # Fix single quotes to double quotes
-        json_str = re.sub(r"'([^']*)':", r'"\1":', json_str)
-        json_str = re.sub(r":\s*'([^']*)'", r': "\1"', json_str)
-        
-        # Remove trailing commas before } and ]
-        json_str = re.sub(r',(\s*[}\]])', r'\1', json_str)
-        
-        # Fix unescaped quotes in strings
-        json_str = re.sub(r':\s*"([^"]*)"([^",}\]]*)"([^",}\]]*)"', r': "\1\2\3"', json_str)
-        
-        # Ensure proper comma placement
-        json_str = re.sub(r'}\s*{', r'}, {', json_str)
-        json_str = re.sub(r']\s*\[', r'], [', json_str)
-        
-        return json_str
-
-    def _emergency_json_fix(self, json_str: str) -> str:
-        """Emergency JSON fix for severely malformed JSON."""
         try:
-            # Count braces and brackets to ensure they're balanced
-            open_braces = json_str.count('{')
-            close_braces = json_str.count('}')
-            open_brackets = json_str.count('[')
-            close_brackets = json_str.count(']')
+            # Basic repairs
+            content = re.sub(r',\s*([}\]])', r'\1', content)  # Remove trailing commas
+            content = re.sub(r'([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', content)  # Quote keys
             
-            # Add missing closing braces/brackets
-            if open_braces > close_braces:
-                json_str += '}' * (open_braces - close_braces)
-            if open_brackets > close_brackets:
-                json_str += ']' * (open_brackets - close_brackets)
+            # Fix common quote issues
+            content = re.sub(r':\s*"([^"]*)"([^",}\]]*)"', r': "\1\2"', content)
             
-            # Remove extra closing braces/brackets
-            if close_braces > open_braces:
-                for _ in range(close_braces - open_braces):
-                    json_str = json_str.rsplit('}', 1)[0]
-            if close_brackets > open_brackets:
-                for _ in range(close_brackets - open_brackets):
-                    json_str = json_str.rsplit(']', 1)[0]
+            return content
             
-            return json_str
-        except:
+        except Exception:
             return None
-
-    def _validate_and_fix_mind_map_structure(self, mind_map: Dict) -> bool:
-        """Validate and fix mind map structure."""
+    
+    def _validate_structured_data(self, data: Dict) -> bool:
+        """Validate the structure of extracted data"""
+        
         try:
-            # Ensure required keys exist
-            if "title" not in mind_map:
-                mind_map["title"] = "Document Mind Map"
-                
-            if "themes" not in mind_map:
-                mind_map["themes"] = []
-                
-            if not isinstance(mind_map["themes"], list):
-                mind_map["themes"] = []
+            # Check required fields
+            if not isinstance(data, dict):
+                return False
             
-            # Fix each theme structure
-            fixed_themes = []
-            for i, theme in enumerate(mind_map["themes"]):
+            if "main_themes" not in data or not isinstance(data["main_themes"], list):
+                return False
+            
+            # Validate themes structure
+            for theme in data["main_themes"]:
                 if not isinstance(theme, dict):
-                    continue
+                    return False
                 
-                # Ensure theme has required fields
-                fixed_theme = {
-                    "id": theme.get("id", f"theme_{i+1}"),
-                    "name": str(theme.get("name", f"Theme {i+1}"))[:100],  # Limit length
-                    "summary": str(theme.get("summary", "Analysis theme"))[:200],  # Limit length
-                    "sub_themes": []
-                }
+                required_fields = ["id", "name", "summary"]
+                for field in required_fields:
+                    if field not in theme:
+                        return False
                 
-                # Fix sub-themes
-                if "sub_themes" in theme and isinstance(theme["sub_themes"], list):
-                    for j, sub_theme in enumerate(theme["sub_themes"]):
-                        if isinstance(sub_theme, dict):
-                            fixed_sub_theme = {
-                                "id": sub_theme.get("id", f"theme_{i+1}_sub_{j+1}"),
-                                "name": str(sub_theme.get("name", f"Subtopic {j+1}"))[:100],
-                                "summary": str(sub_theme.get("summary", "Analysis subtopic"))[:200],
-                                "sub_themes": sub_theme.get("sub_themes", [])
-                            }
-                            fixed_theme["sub_themes"].append(fixed_sub_theme)
-                
-                fixed_themes.append(fixed_theme)
-            
-            mind_map["themes"] = fixed_themes
-            
-            # Ensure we have at least one theme
-            if len(mind_map["themes"]) == 0:
-                mind_map["themes"].append({
-                    "id": "theme_1",
-                    "name": "Document Analysis",
-                    "summary": "Key insights from the document",
-                    "sub_themes": []
-                })
+                # Validate subtopics if present
+                if "subtopics" in theme:
+                    for subtopic in theme["subtopics"]:
+                        if not isinstance(subtopic, dict):
+                            return False
+                        
+                        for field in required_fields:
+                            if field not in subtopic:
+                                return False
             
             return True
             
-        except Exception as e:
-            st.warning(f"Structure validation failed: {e}")
+        except Exception:
             return False
-
-    def _generate_mind_map_fallback(self, document_text: str, document_titles: List[str] = None) -> Dict[str, Any]:
-        """Fallback method using original approach but optimized."""
-        # Simplified fallback - fewer API calls
-        main_themes = self._extract_main_themes(document_text, document_titles)
+    
+    def _build_node_graph(self, structured_data: Dict):
+        """Build the node graph from structured data"""
         
-        if not main_themes:
-            return {"error": "Failed to extract themes"}
+        self.nodes = {}
+        self.edges = []
         
-        mind_map_data = {
-            "title": self._generate_title(document_titles),
-            "themes": []
-        }
+        # Create root node
+        root_id = "root"
+        root_node = MindMapNode(
+            id=root_id,
+            name=structured_data.get("title", "Document Mind Map"),
+            summary="Root node of the knowledge map",
+            level=0,
+            node_type="root",
+            importance=1.0
+        )
+        self.nodes[root_id] = root_node
         
-        # Process only top 5 themes for speed
-        for i, theme in enumerate(main_themes[:5], 1):
-            theme_data = {
-                "id": f"theme_{i}",
-                "name": theme["name"],
-                "summary": theme["summary"],
-                "sub_themes": []
-            }
+        # Process main themes
+        for theme_data in structured_data.get("main_themes", []):
+            theme_node = self._create_theme_node(theme_data, root_id)
+            self.nodes[theme_node.id] = theme_node
+            self.edges.append({
+                "from": root_id,
+                "to": theme_node.id,
+                "relationship": "contains",
+                "strength": 1.0
+            })
             
-            # Generate simple subtopics without deep details
-            subtopics = self._extract_subtopics(document_text, theme)
-            for j, subtopic in enumerate(subtopics[:4], 1):  # Limit to 4 subtopics
-                subtopic_data = {
-                    "id": f"theme_{i}_sub_{j}",
-                    "name": subtopic["name"],
-                    "summary": subtopic["summary"],
-                    "sub_themes": []  # Skip details for speed
-                }
-                theme_data["sub_themes"].append(subtopic_data)
+            # Process subtopics
+            for subtopic_data in theme_data.get("subtopics", []):
+                subtopic_node = self._create_subtopic_node(subtopic_data, theme_node.id)
+                self.nodes[subtopic_node.id] = subtopic_node
+                self.edges.append({
+                    "from": theme_node.id,
+                    "to": subtopic_node.id,
+                    "relationship": "contains", 
+                    "strength": 0.8
+                })
+                
+                # Process details
+                for detail_data in subtopic_data.get("details", []):
+                    detail_node = self._create_detail_node(detail_data, subtopic_node.id)
+                    self.nodes[detail_node.id] = detail_node
+                    self.edges.append({
+                        "from": subtopic_node.id,
+                        "to": detail_node.id,
+                        "relationship": "contains",
+                        "strength": 0.6
+                    })
+        
+        # Add cross-connections
+        for connection in structured_data.get("connections", []):
+            if connection["from"] in self.nodes and connection["to"] in self.nodes:
+                self.edges.append({
+                    "from": connection["from"],
+                    "to": connection["to"],
+                    "relationship": connection.get("relationship", "relates_to"),
+                    "strength": connection.get("strength", 0.5)
+                })
+    
+    def _create_theme_node(self, theme_data: Dict, parent_id: str) -> MindMapNode:
+        """Create a theme node"""
+        return MindMapNode(
+            id=theme_data["id"],
+            name=theme_data["name"][:40],
+            summary=theme_data["summary"],
+            level=1,
+            parent_id=parent_id,
+            node_type="theme",
+            importance=theme_data.get("importance", 0.8),
+            keywords=theme_data.get("keywords", [])
+        )
+    
+    def _create_subtopic_node(self, subtopic_data: Dict, parent_id: str) -> MindMapNode:
+        """Create a subtopic node"""
+        return MindMapNode(
+            id=subtopic_data["id"],
+            name=subtopic_data["name"][:30],
+            summary=subtopic_data["summary"],
+            level=2,
+            parent_id=parent_id,
+            node_type="subtopic",
+            importance=subtopic_data.get("importance", 0.6),
+            keywords=subtopic_data.get("keywords", [])
+        )
+    
+    def _create_detail_node(self, detail_data: Dict, parent_id: str) -> MindMapNode:
+        """Create a detail node"""
+        return MindMapNode(
+            id=detail_data["id"],
+            name=detail_data["name"][:25],
+            summary=detail_data["summary"],
+            level=3,
+            parent_id=parent_id,
+            node_type="detail",
+            importance=detail_data.get("importance", 0.4)
+        )
+    
+    def _generate_visualizations(self) -> Dict[str, Any]:
+        """Generate different visualization formats"""
+        
+        visualizations = {}
+        
+        # 1. Interactive Network Graph (Plotly)
+        if PLOTLY_AVAILABLE:
+            visualizations["network_graph"] = self._create_network_graph()
+            visualizations["hierarchical_tree"] = self._create_hierarchical_tree()
+            visualizations["circular_layout"] = self._create_circular_layout()
+        
+        # 2. HTML/JS Interactive Visualization
+        visualizations["interactive_html"] = self._create_interactive_html()
+        
+        # 3. Mermaid Diagram
+        visualizations["mermaid"] = self._create_mermaid_diagram()
+        
+        return visualizations
+    
+    def _create_network_graph(self) -> Dict:
+        """Create interactive network graph using Plotly"""
+        
+        if not PLOTLY_AVAILABLE or go is None:
+            return {"error": "Plotly not available"}
+        
+        # Create networkx graph
+        G = nx.DiGraph()
+        
+        # Add nodes
+        for node_id, node in self.nodes.items():
+            G.add_node(node_id, 
+                      label=node.name,
+                      summary=node.summary,
+                      level=node.level,
+                      importance=node.importance,
+                      node_type=node.node_type)
+        
+        # Add edges
+        for edge in self.edges:
+            G.add_edge(edge["from"], edge["to"], 
+                      relationship=edge["relationship"],
+                      strength=edge["strength"])
+        
+        # Generate layout
+        pos = nx.spring_layout(G, k=3, iterations=50, seed=42)
+        
+        # Create traces for nodes
+        node_traces = []
+        for level in range(4):
+            level_nodes = [n for n in G.nodes() if G.nodes[n]['level'] == level]
+            if not level_nodes:
+                continue
+                
+            node_x = [pos[node][0] for node in level_nodes]
+            node_y = [pos[node][1] for node in level_nodes]
+            node_text = [G.nodes[node]['label'] for node in level_nodes]
+            node_hover = [f"<b>{G.nodes[node]['label']}</b><br>{G.nodes[node]['summary']}" 
+                         for node in level_nodes]
+            node_sizes = [max(20, G.nodes[node]['importance'] * 40) for node in level_nodes]
             
-            mind_map_data["themes"].append(theme_data)
+            node_trace = go.Scatter(
+                x=node_x, y=node_y,
+                mode='markers+text',
+                text=node_text,
+                textposition='middle center',
+                hovertext=node_hover,
+                hoverinfo='text',
+                marker=dict(
+                    size=node_sizes,
+                    color=self.color_palette.get(level, '#CCCCCC'),
+                    line=dict(width=2, color='white')
+                ),
+                name=f"Level {level}",
+                textfont=dict(size=10, color='white')
+            )
+            node_traces.append(node_trace)
         
-        return mind_map_data
-
-    def _fallback_theme_extraction(self, text: str) -> List[Dict[str, str]]:
-        """Fallback method to extract themes when AI parsing fails."""
-        themes = []
+        # Create edge trace
+        edge_x, edge_y = [], []
+        for edge in G.edges():
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
         
-        # Look for patterns that might indicate themes
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-        potential_themes = []
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=1, color='rgba(125,125,125,0.5)'),
+            hoverinfo='none',
+            mode='lines',
+            showlegend=False
+        )
         
-        for line in lines:
-            # Look for lines that seem like headings or important points
-            if (len(line) > 10 and len(line) < 100 and
-                (line[0].isupper() or 
-                 any(word in line.lower() for word in ['key', 'main', 'important', 'analysis', 'finding']) or
-                 line.startswith(('1.', '2.', '3.', '4.', '5.', '-', '*')))):
-                clean_line = re.sub(r'^[\d\.\-\*\s]+', '', line).strip()
-                if len(clean_line) > 5:
-                    potential_themes.append(clean_line)
+        # Create figure
+        fig = go.Figure(data=[edge_trace] + node_traces,
+                       layout=go.Layout(
+                           title="Interactive Knowledge Network",
+                           showlegend=True,
+                           hovermode='closest',
+                           margin=dict(b=20,l=5,r=5,t=40),
+                           annotations=[ dict(
+                               text="Drag nodes to explore connections",
+                               showarrow=False,
+                               xref="paper", yref="paper",
+                               x=0.005, y=-0.002,
+                               xanchor="left", yanchor="bottom",
+                               font=dict(color="#888888", size=12)
+                           )],
+                           xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                           yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                           plot_bgcolor='white',
+                           height=600
+                       ))
         
-        # Take the first few as themes
-        for i, theme_text in enumerate(potential_themes[:6]):
-            themes.append({
-                "name": theme_text[:50] + ("..." if len(theme_text) > 50 else ""),
-                "summary": f"Key topic extracted from document content"
+        return {"figure": fig, "type": "plotly"}
+    
+    def _create_hierarchical_tree(self) -> Dict:
+        """Create hierarchical tree layout"""
+        
+        if not PLOTLY_AVAILABLE or go is None:
+            return {"error": "Plotly not available"}
+        
+        # Build tree structure
+        tree_data = self._build_tree_structure()
+        
+        fig = go.Figure(go.Treemap(
+            ids=[node["id"] for node in tree_data],
+            labels=[node["name"] for node in tree_data],
+            parents=[node["parent"] for node in tree_data],
+            values=[node["importance"] for node in tree_data],
+            textinfo="label+value",
+            hovertemplate='<b>%{label}</b><br>Importance: %{value}<extra></extra>',
+            maxdepth=4,
+            pathbar_thickness=20
+        ))
+        
+        fig.update_layout(
+            title="Hierarchical Knowledge Structure",
+            font_size=12,
+            height=500
+        )
+        
+        return {"figure": fig, "type": "plotly"}
+    
+    def _create_circular_layout(self) -> Dict:
+        """Create circular/radial layout"""
+        
+        if not PLOTLY_AVAILABLE or go is None:
+            return {"error": "Plotly not available"}
+        
+        # Create sunburst chart
+        tree_data = self._build_tree_structure()
+        
+        fig = go.Figure(go.Sunburst(
+            ids=[node["id"] for node in tree_data],
+            labels=[node["name"] for node in tree_data],
+            parents=[node["parent"] for node in tree_data],
+            values=[node["importance"] for node in tree_data],
+            hovertemplate='<b>%{label}</b><br>%{text}<extra></extra>',
+            maxdepth=4
+        ))
+        
+        fig.update_layout(
+            title="Circular Knowledge Map",
+            font_size=12,
+            height=600
+        )
+        
+        return {"figure": fig, "type": "plotly"}
+    
+    def _build_tree_structure(self) -> List[Dict]:
+        """Build tree structure for hierarchical visualizations"""
+        
+        tree_data = []
+        
+        # Add all nodes
+        for node_id, node in self.nodes.items():
+            tree_data.append({
+                "id": node_id,
+                "name": node.name,
+                "parent": node.parent_id if node.parent_id else "",
+                "importance": node.importance,
+                "summary": node.summary
             })
         
-        # If no themes found, create generic ones
-        if not themes:
-            themes = [
-                {"name": "Document Overview", "summary": "Main content and structure of the document"},
-                {"name": "Key Points", "summary": "Important findings and conclusions"},
-                {"name": "Analysis", "summary": "Analysis and interpretation of the content"}
-            ]
+        return tree_data
+    
+    def _create_interactive_html(self) -> Dict:
+        """Create interactive HTML visualization"""
         
-        return themes
-
-    def _generate_title(self, document_titles: List[str] = None) -> str:
-        """Generate a title for the mind map."""
-        if document_titles:
-            if len(document_titles) == 1:
-                return f"Mind Map: {document_titles[0]}"
+        # Create a simple HTML structure for the mind map
+        html_content = f"""
+        <div class="mindmap-container" style="width: 100%; height: 500px; border: 1px solid #ddd; overflow: auto;">
+            <div class="mindmap-title" style="text-align: center; padding: 10px; background: #f5f5f5; font-weight: bold;">
+                Interactive Mind Map
+            </div>
+            <div class="mindmap-content" style="padding: 20px;">
+        """
+        
+        # Add nodes in hierarchical structure
+        root_nodes = [node for node in self.nodes.values() if node.node_type == "root"]
+        for root in root_nodes:
+            html_content += self._build_html_node(root, 0)
+        
+        html_content += """
+            </div>
+        </div>
+        <style>
+            .mindmap-node { margin: 10px 0; padding: 10px; border-left: 3px solid #4ECDC4; background: #f9f9f9; }
+            .mindmap-node.level-0 { border-left-color: #FF6B6B; }
+            .mindmap-node.level-1 { border-left-color: #4ECDC4; margin-left: 20px; }
+            .mindmap-node.level-2 { border-left-color: #45B7D1; margin-left: 40px; }
+            .mindmap-node.level-3 { border-left-color: #96CEB4; margin-left: 60px; }
+            .node-title { font-weight: bold; color: #333; }
+            .node-summary { color: #666; margin-top: 5px; font-size: 0.9em; }
+            .node-keywords { color: #888; margin-top: 5px; font-size: 0.8em; font-style: italic; }
+        </style>
+        """
+        
+        return {"html": html_content, "type": "html"}
+    
+    def _build_html_node(self, node: MindMapNode, depth: int) -> str:
+        """Build HTML representation of a node"""
+        
+        html = f"""
+        <div class="mindmap-node level-{node.level}">
+            <div class="node-title">{node.name}</div>
+            <div class="node-summary">{node.summary}</div>
+        """
+        
+        if node.keywords:
+            html += f'<div class="node-keywords">Keywords: {", ".join(node.keywords)}</div>'
+        
+        # Add children
+        children = [n for n in self.nodes.values() if n.parent_id == node.id]
+        for child in children:
+            html += self._build_html_node(child, depth + 1)
+        
+        html += "</div>"
+        return html
+    
+    def _create_mermaid_diagram(self) -> Dict:
+        """Create Mermaid diagram representation"""
+        
+        mermaid_content = ["graph TD"]
+        
+        # Add nodes with styling
+        for node_id, node in self.nodes.items():
+            clean_id = node_id.replace("-", "_").replace(" ", "_")
+            clean_name = node.name.replace('"', "'")
+            
+            if node.node_type == "root":
+                mermaid_content.append(f'    {clean_id}["{clean_name}"]')
+                mermaid_content.append(f'    class {clean_id} root-node')
+            elif node.node_type == "theme":
+                mermaid_content.append(f'    {clean_id}("{clean_name}")')
+                mermaid_content.append(f'    class {clean_id} theme-node')
+            elif node.node_type == "subtopic":
+                mermaid_content.append(f'    {clean_id}["{clean_name}"]')
+                mermaid_content.append(f'    class {clean_id} subtopic-node')
             else:
-                return f"Mind Map: {len(document_titles)} Documents"
-        return "Document Mind Map"
+                mermaid_content.append(f'    {clean_id}("{clean_name}")')
+                mermaid_content.append(f'    class {clean_id} detail-node')
+        
+        # Add edges
+        for edge in self.edges:
+            from_clean = edge["from"].replace("-", "_").replace(" ", "_")
+            to_clean = edge["to"].replace("-", "_").replace(" ", "_")
+            mermaid_content.append(f'    {from_clean} --> {to_clean}')
+        
+        # Add styling
+        mermaid_content.extend([
+            "",
+            "    classDef root-node fill:#FF6B6B,stroke:#333,stroke-width:3px,color:white",
+            "    classDef theme-node fill:#4ECDC4,stroke:#333,stroke-width:2px,color:white", 
+            "    classDef subtopic-node fill:#45B7D1,stroke:#333,stroke-width:2px,color:white",
+            "    classDef detail-node fill:#96CEB4,stroke:#333,stroke-width:1px,color:white"
+        ])
+        
+        return {"diagram": "\n".join(mermaid_content), "type": "mermaid"}
+    
+    def _node_to_dict(self, node: MindMapNode) -> Dict:
+        """Convert MindMapNode to dictionary"""
+        return {
+            "id": node.id,
+            "name": node.name,
+            "summary": node.summary,
+            "level": node.level,
+            "parent_id": node.parent_id,
+            "children": node.children,
+            "node_type": node.node_type,
+            "importance": node.importance,
+            "keywords": node.keywords
+        }
+    
+    def _generate_statistics(self) -> Dict[str, Any]:
+        """Generate statistics about the mind map"""
+        
+        stats = {
+            "total_nodes": len(self.nodes),
+            "total_edges": len(self.edges),
+            "max_depth": max([node.level for node in self.nodes.values()]) if self.nodes else 0,
+            "total_keywords": sum([len(node.keywords) for node in self.nodes.values()]),
+            "nodes_by_level": {},
+            "nodes_by_type": {},
+            "average_importance": sum([node.importance for node in self.nodes.values()]) / len(self.nodes) if self.nodes else 0
+        }
+        
+        # Count by level
+        for node in self.nodes.values():
+            level = node.level
+            stats["nodes_by_level"][level] = stats["nodes_by_level"].get(level, 0) + 1
+            
+            node_type = node.node_type
+            stats["nodes_by_type"][node_type] = stats["nodes_by_type"].get(node_type, 0) + 1
+        
+        return stats
+    
+    def _fallback_structure_extraction(self, document_text: str, document_titles: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Fallback method for structure extraction when AI fails"""
+        
+        # Simple text-based analysis
+        lines = document_text.split('\n')
+        themes = []
+        current_theme = None
+        
+        for line in lines[:100]:  # Analyze first 100 lines
+            if len(line) > 10 and len(line) < 100:
+                # Potential theme/topic
+                if current_theme is None or len(current_theme.get("subtopics", [])) >= 3:
+                    current_theme = {
+                        "id": f"theme_{len(themes) + 1}",
+                        "name": line.strip()[:40],
+                        "summary": f"Analysis of {line.strip()[:30]}",
+                        "importance": 0.7,
+                        "keywords": [],
+                        "subtopics": []
+                    }
+                    themes.append(current_theme)
+                else:
+                    # Add as subtopic
+                    subtopic = {
+                        "id": f"theme_{len(themes)}_sub_{len(current_theme['subtopics']) + 1}",
+                        "name": line.strip()[:30],
+                        "summary": f"Details about {line.strip()[:20]}",
+                        "importance": 0.5,
+                        "keywords": [],
+                        "details": []
+                    }
+                    current_theme["subtopics"].append(subtopic)
+            
+            if len(themes) >= 5:  # Limit fallback themes
+                break
+        
+        if not themes:
+            themes.append({
+                "id": "theme_1",
+                "name": "Document Analysis",
+                "summary": "General analysis of the document content",
+                "importance": 0.8,
+                "keywords": [],
+                "subtopics": []
+            })
+        
+        return {
+            "title": document_titles[0] if document_titles else "Document Mind Map",
+            "main_themes": themes,
+            "connections": []
+        }
+    
+    def export_to_markdown(self, mind_map_data: Dict) -> str:
+        """Export mind map to markdown format"""
+        
+        lines = [f"# {mind_map_data.get('title', 'Mind Map')}", ""]
+        
+        # Add statistics
+        stats = mind_map_data.get('statistics', {})
+        lines.extend([
+            "## Overview",
+            f"- **Total Concepts**: {stats.get('total_nodes', 0)}",
+            f"- **Connections**: {stats.get('total_edges', 0)}",
+            f"- **Depth Levels**: {stats.get('max_depth', 0)}",
+            f"- **Keywords**: {stats.get('total_keywords', 0)}",
+            ""
+        ])
+        
+        # Add nodes by level
+        nodes = mind_map_data.get('nodes', {})
+        
+        def add_node_markdown(node_id: str, level: int = 2):
+            if node_id not in nodes:
+                return
+                
+            node = nodes[node_id]
+            header = "#" * level
+            lines.append(f"{header} {node['name']}")
+            lines.append(f"{node['summary']}")
+            lines.append("")
+            
+            if node.get('keywords'):
+                lines.append(f"**Keywords**: {', '.join(node['keywords'])}")
+                lines.append("")
+            
+            # Add children
+            children = [nid for nid, n in nodes.items() if n.get('parent_id') == node_id]
+            for child_id in children:
+                add_node_markdown(child_id, level + 1)
+        
+        # Start with root node
+        root_nodes = [nid for nid, n in nodes.items() if not n.get('parent_id') or n.get('node_type') == 'root']
+        for root_id in root_nodes:
+            children = [nid for nid, n in nodes.items() if n.get('parent_id') == root_id]
+            for child_id in children:
+                add_node_markdown(child_id, 2)
+        
+        return "\n".join(lines)
+    
+    def export_to_graphml(self, mind_map_data: Dict) -> str:
+        """Export mind map to GraphML format for advanced graph analysis tools"""
+        
+        graphml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  
+  <key id="name" for="node" attr.name="name" attr.type="string"/>
+  <key id="summary" for="node" attr.name="summary" attr.type="string"/>
+  <key id="importance" for="node" attr.name="importance" attr.type="double"/>
+  <key id="level" for="node" attr.name="level" attr.type="int"/>
+  <key id="node_type" for="node" attr.name="node_type" attr.type="string"/>
+  
+  <key id="relationship" for="edge" attr.name="relationship" attr.type="string"/>
+  <key id="strength" for="edge" attr.name="strength" attr.type="double"/>
+  
+  <graph id="mindmap" edgedefault="directed">
+'''
+        
+        # Add nodes
+        nodes = mind_map_data.get('nodes', {})
+        for node_id, node in nodes.items():
+            graphml_content += f'''    <node id="{node_id}">
+      <data key="name">{node['name']}</data>
+      <data key="summary">{node['summary']}</data>
+      <data key="importance">{node['importance']}</data>
+      <data key="level">{node['level']}</data>
+      <data key="node_type">{node['node_type']}</data>
+    </node>
+'''
+        
+        # Add edges
+        edges = mind_map_data.get('edges', [])
+        for i, edge in enumerate(edges):
+            graphml_content += f'''    <edge id="e{i}" source="{edge['from']}" target="{edge['to']}">
+      <data key="relationship">{edge['relationship']}</data>
+      <data key="strength">{edge['strength']}</data>
+    </edge>
+'''
+        
+        graphml_content += '''  </graph>
+</graphml>'''
+        
+        return graphml_content
 
-    def export_to_mermaid(self, mind_map_data: Dict[str, Any]) -> str:
-        """Export mind map to Mermaid syntax for interactive visualization."""
-        if "error" in mind_map_data:
-            return f"graph TD\n A[Error: {mind_map_data['error']}]"
-        
-        mermaid_lines = ["graph TD"]
-        
-        # Clean title and ensure mermaid compatibility
-        clean_title = mind_map_data['title'][:35].replace('"', "'")
-        mermaid_lines.append(f"    Root[\"{clean_title}\"]")
-        
-        def add_node_to_mermaid(node_data: Dict, parent_id: str = "Root", level: int = 1):
-            # Create safer node ID - replace problematic characters and ensure uniqueness
-            base_id = re.sub(r'[^a-zA-Z0-9]', '', node_data["id"])
-            node_id = f"N{level}_{base_id[:10]}" if level > 0 else base_id[:10]
-            
-            # Clean node name and escape quotes
-            node_name = node_data["name"][:25].replace('"', "'") + ("..." if len(node_data["name"]) > 25 else "")
-            
-            # Add the node
-            mermaid_lines.append(f"    {node_id}[\"{node_name}\"]")
-            mermaid_lines.append(f"    {parent_id} --> {node_id}")
-            
-            # Add sub-themes recursively
-            for sub_theme in node_data.get("sub_themes", []):
-                add_node_to_mermaid(sub_theme, node_id, level + 1)
-        
-        # Add all themes
-        for theme in mind_map_data.get("themes", []):
-            add_node_to_mermaid(theme)
-        
-        return "\n".join(mermaid_lines)
-
-    def export_to_markdown(self, mind_map_data: Dict[str, Any]) -> str:
-        """Export mind map to markdown format."""
-        if "error" in mind_map_data:
-            return f"# Error\n\n{mind_map_data['error']}"
-        
-        markdown_lines = [f"# {mind_map_data['title']}", ""]
-        
-        def add_theme_to_markdown(theme_data: Dict, level: int = 1):
-            indent = "#" * (level + 1)
-            markdown_lines.append(f"{indent} {theme_data['name']}")
-            markdown_lines.append(f"\n{theme_data['summary']}\n")
-            
-            for sub_theme in theme_data.get("sub_themes", []):
-                add_theme_to_markdown(sub_theme, level + 1)
-        
-        for theme in mind_map_data.get("themes", []):
-            add_theme_to_markdown(theme)
-        
-        return "\n".join(markdown_lines)
+# For backward compatibility, create an alias
+MindMapGenerator = NotebookLMMindMapGenerator

@@ -48,3 +48,5 @@ scikit-learn
 scipy
 streamlit
 streamlit
+networkx
+pyvis
