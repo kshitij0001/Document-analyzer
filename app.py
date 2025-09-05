@@ -1067,7 +1067,7 @@ st.markdown("""
 
 # App header with logo
 if "process_icon_b64" in st.session_state:
-    st.markdown(f"<div style='display: flex; align-items: center;'><img src='data:image/png;base64,{st.session_state.process_icon_b64}' width='48' height='48' style='margin-right: 0.5rem;'><h1>AI Document Analyzer & Chat</h1></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='display: flex; justify-content: center; align-items: center;'><img src='data:image/png;base64,{st.session_state.process_icon_b64}' width='48' height='48' style='margin-right: 0.5rem;'><h1>AI Document Analyzer & Chat</h1></div>", unsafe_allow_html=True)
 st.markdown("*Upload documents and chat with them using AI*")
 
 st.markdown("---")
