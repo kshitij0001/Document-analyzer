@@ -75,17 +75,17 @@ class MindMapGenerator:
             return {"error": "No document content provided"}
         
         try:
-            with st.status("🧠 Generating mind map...", expanded=True) as status:
+            with st.status("Generating mind map...", expanded=True) as status:
                 
                 # Step 1: Extract structured data
-                st.write("🔍 Analyzing document structure...")
+                st.write("Analyzing document structure...")
                 structured_data = self._extract_structured_data(document_text, document_titles)
                 
                 if not structured_data or "error" in structured_data:
                     return {"error": "Failed to extract structured data from document"}
                 
                 # Step 2: Convert to themes format
-                st.write("🌐 Building knowledge structure...")
+                st.write("Building knowledge structure...")
                 themes = self._convert_to_themes_format(structured_data)
                 
                 # Step 3: Prepare final data structure
@@ -95,8 +95,8 @@ class MindMapGenerator:
                     "statistics": self._generate_statistics(themes)
                 }
                 
-                st.write(f"✅ Generated mind map with {len(themes)} themes")
-                status.update(label="✅ Mind map generation complete!", state="complete")
+                st.write(f"Generated mind map with {len(themes)} themes")
+                status.update(label="Mind map generation complete!", state="complete")
                 
                 return mind_map_data
                 
@@ -114,7 +114,7 @@ class MindMapGenerator:
         # Handle large documents with intelligent sampling
         max_content_length = 20000
         if len(document_text) > max_content_length:
-            st.info(f"📄 Large document detected ({len(document_text):,} characters). Using intelligent sampling...")
+            st.info(f"Large document detected ({len(document_text):,} characters). Using intelligent sampling...")
             processed_text = self._intelligent_document_sampling(document_text, max_content_length)
         else:
             processed_text = document_text

@@ -274,7 +274,7 @@ def handle_pending_actions():
         st.success(f"Started discussion about '{topic['name']}' - check the Chat tab!")
 
 def perform_comprehensive_analysis(theme_data):
-    """Perform comprehensive analysis and display results"""
+    """Perform comprehensive analysis and send results to chat"""
     try:
         all_text = []
         for filename, doc_info in st.session_state.documents.items():
@@ -288,7 +288,7 @@ def perform_comprehensive_analysis(theme_data):
         combined_text = "\n\n".join(all_text)
         theme_name = theme_data["name"]
 
-        with st.spinner(f"🔍 Analyzing '{theme_name}'..."):
+        with st.spinner(f"Analyzing '{theme_name}'..."):
             analysis_prompt = f"""Provide a comprehensive analysis of '{theme_name}' based on the document content.
 
             Include:
@@ -307,8 +307,15 @@ def perform_comprehensive_analysis(theme_data):
             )
 
             if response["success"]:
-                st.success(f"🔍 Comprehensive Analysis: {theme_name}")
-                st.write(response["content"])
+                # Add question and response to chat history
+                if "chat_messages" not in st.session_state:
+                    st.session_state.chat_messages = []
+                
+                user_question = f"Provide a comprehensive analysis of '{theme_name}' from the uploaded documents."
+                st.session_state.chat_messages.append({"role": "user", "message": user_question})
+                st.session_state.chat_messages.append({"role": "assistant", "message": response["content"]})
+                
+                st.success(f"Comprehensive analysis of '{theme_name}' added to chat - check the Chat tab!")
             else:
                 st.error(f"Analysis failed: {response.get('error', 'Unknown error')}")
 
@@ -316,7 +323,7 @@ def perform_comprehensive_analysis(theme_data):
         st.error(f"Error in comprehensive analysis: {str(e)}")
 
 def perform_data_extraction(theme_data):
-    """Extract data points and display results"""
+    """Extract data points and send results to chat"""
     try:
         all_text = []
         for filename, doc_info in st.session_state.documents.items():
@@ -326,7 +333,7 @@ def perform_data_extraction(theme_data):
         combined_text = "\n\n".join(all_text)
         theme_name = theme_data["name"]
 
-        with st.spinner(f"📊 Extracting data for '{theme_name}'..."):
+        with st.spinner(f"Extracting data for '{theme_name}'..."):
             data_prompt = f"""Extract all specific data points, statistics, numbers, dates, names, and factual information related to '{theme_name}'.
 
             Format as organized bullet points:
@@ -342,8 +349,15 @@ def perform_data_extraction(theme_data):
             )
 
             if response["success"]:
-                st.success(f"Data Points: {theme_name}")
-                st.write(response["content"])
+                # Add question and response to chat history
+                if "chat_messages" not in st.session_state:
+                    st.session_state.chat_messages = []
+                
+                user_question = f"Extract all data points and statistics related to '{theme_name}' from the uploaded documents."
+                st.session_state.chat_messages.append({"role": "user", "message": user_question})
+                st.session_state.chat_messages.append({"role": "assistant", "message": response["content"]})
+                
+                st.success(f"Data points for '{theme_name}' added to chat - check the Chat tab!")
             else:
                 st.error(f"Data extraction failed: {response.get('error', 'Unknown error')}")
 
@@ -351,7 +365,7 @@ def perform_data_extraction(theme_data):
         st.error(f"Error in data extraction: {str(e)}")
 
 def perform_details_generation(sub_theme_data):
-    """Generate detailed notes and display results"""
+    """Generate detailed notes and send results to chat"""
     try:
         all_text = []
         for filename, doc_info in st.session_state.documents.items():
@@ -382,8 +396,15 @@ def perform_details_generation(sub_theme_data):
             )
 
             if response["success"]:
-                st.success(f"Detailed Notes: {topic_name}")
-                st.write(response["content"])
+                # Add question and response to chat history
+                if "chat_messages" not in st.session_state:
+                    st.session_state.chat_messages = []
+                
+                user_question = f"Generate detailed notes about '{topic_name}' from the uploaded documents."
+                st.session_state.chat_messages.append({"role": "user", "message": user_question})
+                st.session_state.chat_messages.append({"role": "assistant", "message": response["content"]})
+                
+                st.success(f"Detailed notes for '{topic_name}' added to chat - check the Chat tab!")
             else:
                 st.error(f"Details generation failed: {response.get('error', 'Unknown error')}")
 
@@ -447,7 +468,7 @@ def display_mind_map_results(mind_map_data):
         markdown_content = st.session_state.mindmap_generator.export_to_markdown(mind_map_data)
         st.markdown(markdown_content)
         st.download_button(
-            "📄 Download Markdown",
+            "Download Markdown",
             markdown_content,
             "mindmap.md",
             "text/markdown"
@@ -558,7 +579,7 @@ def explore_topic_in_chat(topic_data):
 
         st.session_state.chat_messages.append({"role": "user", "message": question})
 
-        st.success(f"✅ Added exploration question about '{topic_name}' to chat!")
+        st.success(f"Added exploration question about '{topic_name}' to chat!")
 
     except Exception as e:
         st.error(f"Error in topic exploration: {str(e)}")
@@ -615,7 +636,7 @@ def generate_comprehensive_analysis(theme_data):
             )
 
             if response["success"]:
-                st.success(f"🔍 Comprehensive Analysis: {theme_name}")
+                st.success(f"Comprehensive Analysis: {theme_name}")
                 st.write(response["content"])
             else:
                 st.error(f"Failed to generate analysis: {response['error']}")
@@ -695,8 +716,8 @@ def upload_document():
                 # Add to vector store if successful
                 if doc_result["success"]:
                     st.session_state.vector_store.add_document(doc_result)
-                    st.success(f"✅ Successfully processed {uploaded_file.name}")
-                    st.info(f"📄 {doc_result['word_count']} words, {doc_result['chunk_count']} chunks")
+                    st.success(f"Successfully processed {uploaded_file.name}")
+                    st.info(f"{doc_result['word_count']} words, {doc_result['chunk_count']} chunks")
                 else:
                     st.error(f"❌ Failed to process {uploaded_file.name}: {doc_result['error']}")
         else:
@@ -707,7 +728,7 @@ def display_documents():
     if st.session_state.documents:
         st.write("**Uploaded Documents:**")
         for filename, doc_info in st.session_state.documents.items():
-            with st.expander(f"📄 {filename}"):
+            with st.expander(f"{filename}"):
                 if doc_info["success"]:
                     st.write(st.session_state.processor.get_document_summary(doc_info))
                     if st.button(f"Remove {filename}", key=f"remove_{filename}"):
@@ -736,7 +757,7 @@ def generate_fresh_summary():
                 return
 
             combined_text = "\n\n=== DOCUMENT SEPARATOR ===\n\n".join(all_text)
-            st.write(f"📊 Analyzing {len(document_titles)} document(s)...")
+            st.write(f"Analyzing {len(document_titles)} document(s)...")
 
             # Generate summary using AI
             response = st.session_state.ai_client.analyze_document(
@@ -746,7 +767,7 @@ def generate_fresh_summary():
 
             if response["success"]:
                 content = response["content"]
-                status.update(label="✅ Summary generated!", state="complete")
+                status.update(label="Summary generated!", state="complete")
 
                 # Cache the result
                 save_analysis_cache("summary", content)
@@ -754,7 +775,7 @@ def generate_fresh_summary():
                 # Display with regenerate option
                 col1, col2 = st.columns([3, 1])
                 with col2:
-                    st.button("🔄 Regenerate", key="regen_summary_new", on_click=regenerate_summary)
+                    st.button("Regenerate", key="regen_summary_new", on_click=regenerate_summary)
 
                 st.write(content)
             else:
@@ -787,13 +808,13 @@ def generate_fresh_key_points():
 
             if response["success"]:
                 content = response["content"]
-                status.update(label="✅ Key points extracted!", state="complete")
+                status.update(label="Key points extracted!", state="complete")
 
                 save_analysis_cache("key_points", content)
 
                 col1, col2 = st.columns([3, 1])
                 with col2:
-                    st.button("🔄 Regenerate", key="regen_key_points_new", on_click=regenerate_key_points)
+                    st.button("Regenerate", key="regen_key_points_new", on_click=regenerate_key_points)
 
                 st.write(content)
             else:
@@ -817,7 +838,7 @@ def generate_fresh_sentiment():
                 return
 
             combined_text = "\n\n".join(all_text)
-            st.write("🎭 Examining emotional tone and attitudes...")
+            st.write("Examining emotional tone and attitudes...")
 
             response = st.session_state.ai_client.analyze_document(
                 combined_text[:15000],
@@ -826,13 +847,13 @@ def generate_fresh_sentiment():
 
             if response["success"]:
                 content = response["content"]
-                status.update(label="✅ Sentiment analysis complete!", state="complete")
+                status.update(label="Sentiment analysis complete!", state="complete")
 
                 save_analysis_cache("sentiment", content)
 
                 col1, col2 = st.columns([3, 1])
                 with col2:
-                    st.button("🔄 Regenerate", key="regen_sentiment_new", on_click=regenerate_sentiment)
+                    st.button("Regenerate", key="regen_sentiment_new", on_click=regenerate_sentiment)
 
                 st.write(content)
             else:
@@ -870,7 +891,7 @@ def generate_fresh_mind_map():
             # Display with regenerate option
             col1, col2 = st.columns([3, 1])
             with col2:
-                st.button("🔄 Regenerate", key="regen_mindmap_new", on_click=regenerate_mindmap)
+                st.button("Regenerate", key="regen_mindmap_new", on_click=regenerate_mindmap)
 
             display_mind_map_results(mind_map_data)
         else:
@@ -897,9 +918,9 @@ def generate_document_summary():
     if cached_result:
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.info("📄 Using cached analysis")
+            st.info("Using cached analysis")
         with col2:
-            st.button("🔄 Regenerate", key="regen_summary", on_click=regenerate_summary)
+            st.button("Regenerate", key="regen_summary", on_click=regenerate_summary)
 
         st.write(cached_result["content"])
         return
@@ -923,9 +944,9 @@ def extract_key_points():
     if cached_result:
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.info("🎯 Using cached analysis")
+            st.info("Using cached analysis")
         with col2:
-            st.button("🔄 Regenerate", key="regen_key_points", on_click=regenerate_key_points)
+            st.button("Regenerate", key="regen_key_points", on_click=regenerate_key_points)
 
         st.write(cached_result["content"])
         return
@@ -951,7 +972,7 @@ def analyze_sentiment():
         with col1:
             st.info("📈 Using cached analysis")
         with col2:
-            st.button("🔄 Regenerate", key="regen_sentiment", on_click=regenerate_sentiment)
+            st.button("Regenerate", key="regen_sentiment", on_click=regenerate_sentiment)
 
         st.write(cached_result["content"])
         return
@@ -975,9 +996,9 @@ def generate_mind_map():
     if cached_result:
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.info("🧠 Using cached mind map")
+            st.info("Using cached mind map")
         with col2:
-            st.button("🔄 Regenerate", key="regen_mindmap", on_click=regenerate_mindmap)
+            st.button("Regenerate", key="regen_mindmap", on_click=regenerate_mindmap)
 
         display_mind_map_results(cached_result["content"])
         return

@@ -454,7 +454,7 @@ Please answer the question based on the document content above."""
                 import google.generativeai as genai
             except ImportError as import_error:
                 debug_info = f"""
-🔍 **Import Debug Information:**
+**Import Debug Information:**
 - Python Path: {python_path}
 - Python Version: {python_version}
 - Current Working Directory: {os.getcwd()}
@@ -660,14 +660,14 @@ Free models give you 50 requests/day (1000 with $10+ credits)."""
             return {
                 "provider": self.provider,
                 "model": self.current_model,
-                "api_key_status": "✅ Ready",
+                "api_key_status": "Ready",
                 "available_models": list(self.available_models.keys())
             }
         else:
             return {
                 "provider": "Not Configured",
                 "model": "None",
-                "api_key_status": "❌ API Key Required",
+                "api_key_status": "API Key Required",
                 "available_models": []
             }
     
