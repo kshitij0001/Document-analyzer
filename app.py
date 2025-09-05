@@ -1096,7 +1096,7 @@ with sources_col:
     st.markdown("---")
 
     # AI Settings
-    st.markdown(f"**<img src='data:image/png;base64,{st.session_state.get('gear_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 6px;'>Settings**", unsafe_allow_html=True)
+    st.markdown(f"**<img src='data:image/png;base64,{st.session_state.get('gear_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 4px;'> Settings**", unsafe_allow_html=True)
 
     # Model selection
     available_models = st.session_state.ai_client.available_models
@@ -1246,8 +1246,8 @@ with studio_col:
                 extract_key_points()
                 st.rerun()
         with col2:
-            mindmap_icon = f"<img src='data:image/png;base64,{st.session_state.get('mindmap_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 6px;'>"
-            if st.button(f"{mindmap_icon}Mind Map", use_container_width=True):
+            mindmap_icon = f"<img src='data:image/png;base64,{st.session_state.get('mindmap_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 4px;'>"
+            if st.button(f"{mindmap_icon} Mind Map", use_container_width=True):
                 generate_mind_map()
                 st.rerun()
             if st.button("Sentiment", use_container_width=True):
