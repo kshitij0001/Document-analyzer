@@ -12,3 +12,8 @@ google-generativeai
 networkx
 pyvis
 dataclasses
+docx
+networkx
+plotly
+pyvis
+streamlit
