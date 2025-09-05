@@ -35,3 +35,16 @@ python-levenshtein
 requests
 scikit-learn
 streamlit
+fuzzywuzzy
+google-generativeai
+numpy
+openai
+plotly
+PyPDF2
+python-docx
+python-levenshtein
+requests
+scikit-learn
+scipy
+streamlit
+streamlit
