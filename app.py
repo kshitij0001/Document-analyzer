@@ -236,10 +236,14 @@ def handle_pending_actions():
         topic = action["topic"]
         question = f"Tell me more about '{topic['name']}'. {topic.get('summary', '')} What are the key insights and details I should know?"
 
-        # Add to chat
+        # Add user question to chat
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         st.session_state.chat_messages.append({"role": "user", "message": question})
+        
+        # Generate AI response automatically
+        _generate_chat_response(question)
+        
         st.success(f"Started exploration of '{topic['name']}' - check the Chat tab!")
 
     # Handle details
@@ -271,7 +275,50 @@ def handle_pending_actions():
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         st.session_state.chat_messages.append({"role": "user", "message": question})
+        
+        # Generate AI response automatically
+        _generate_chat_response(question)
+        
         st.success(f"Started discussion about '{topic['name']}' - check the Chat tab!")
+
+def _generate_chat_response(user_question: str):
+    """Generate AI response for a user question and add it to chat"""
+    try:
+        if not st.session_state.documents:
+            return
+            
+        # Get relevant context from documents
+        results = st.session_state.vector_store.search(user_question)
+        
+        if results:
+            context = "\n\n".join([result["chunk"]["text"] for result in results[:3]])
+        else:
+            # Fallback: use first chunk of each document
+            context_parts = []
+            for filename, doc_info in st.session_state.documents.items():
+                if doc_info["success"] and doc_info["chunks"]:
+                    context_parts.append(doc_info["chunks"][0]["text"])
+            context = "\n\n".join(context_parts)
+        
+        # Get AI response
+        response = st.session_state.ai_client.chat_with_document(
+            user_question,
+            context,
+            max_tokens=1000
+        )
+        
+        # Add response to chat
+        if response["success"]:
+            ai_message = response["content"]
+            st.session_state.chat_messages.append({"role": "assistant", "message": ai_message})
+            save_chat_history()
+        else:
+            error_message = f"Sorry, I encountered an error: {response['error']}"
+            st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
+            
+    except Exception as e:
+        error_message = f"Error generating response: {str(e)}"
+        st.session_state.chat_messages.append({"role": "assistant", "message": error_message})
 
 def perform_comprehensive_analysis(theme_data):
     """Perform comprehensive analysis and send results to chat"""
