@@ -14,19 +14,6 @@ from vector_store import VectorStore
 from ai_client import AIClient
 from mindmap_generator import MindMapGenerator
 
-# Optional plotly imports for mind map visualization
-try:
-    import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
-    PLOTLY_AVAILABLE = True
-except ImportError as e:
-    PLOTLY_AVAILABLE = False
-    go = None
-    make_subplots = None
-except Exception as e:
-    PLOTLY_AVAILABLE = False
-    go = None
-    make_subplots = None
 
 # PNG Icon Loading Function
 import base64
@@ -449,7 +436,7 @@ def display_mind_map_results(mind_map_data):
     st.session_state.mindmap_data = mind_map_data
 
     # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["Tree View", "Markdown", "Mermaid Diagram"])
+    tab1, tab2 = st.tabs(["Tree View", "Markdown"])
 
     with tab1:
         st.write("**Interactive Mind Map Structure**")
@@ -466,27 +453,6 @@ def display_mind_map_results(mind_map_data):
             "text/markdown"
         )
 
-    with tab3:
-        st.write("**Interactive Mermaid Diagram**")
-        mermaid_content = st.session_state.mindmap_generator.export_to_mermaid(mind_map_data)
-
-        if mermaid_content and len(mermaid_content.strip()) > 10:
-            # Just show the diagram using simple HTML
-            streamlit.components.v1.html(f"""
-            <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
-            <div class="mermaid">
-            {mermaid_content}
-            </div>
-            <script>
-            mermaid.initialize({{startOnLoad:true}});
-            </script>
-            """, height=500)
-
-            # Show code for debugging
-            with st.expander("View Mermaid Code"):
-                st.code(mermaid_content, language="mermaid")
-        else:
-            st.error("No valid mermaid content generated")
 
 def display_mind_map_tree(mind_map_data):
     """FIXED: Display mind map as an interactive tree structure with working buttons"""

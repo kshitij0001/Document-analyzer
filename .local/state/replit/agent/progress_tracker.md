@@ -8,3 +8,6 @@
 [x] 8. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool
 [x] 9. Updated settings icon with custom SVG provided by user
 [x] 10. Integrated NotebookLM-style mindmap generator with enhanced visualizations and analysis capabilities
+[x] 11. Removed graph generation dependencies (networkx, plotly, pyvis) per user request
+[x] 12. Simplified mindmap to only support tree view and markdown export
+[x] 13. Updated application to work without graph visualization libraries
