@@ -1066,13 +1066,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # App header with logo
-col1, col2 = st.columns([1, 4])
-with col1:
-    if "process_icon_b64" in st.session_state:
-        st.markdown(f"<img src='data:image/png;base64,{st.session_state.process_icon_b64}' width='48' height='48' style='margin-bottom: 1rem;'>", unsafe_allow_html=True)
-with col2:
-    st.markdown("# AI Document Analyzer & Chat")
-    st.markdown("*Upload documents and chat with them using AI*")
+if "process_icon_b64" in st.session_state:
+    st.markdown(f"<div style='display: flex; align-items: center;'><img src='data:image/png;base64,{st.session_state.process_icon_b64}' width='48' height='48' style='margin-right: 0.5rem;'><h1>AI Document Analyzer & Chat</h1></div>", unsafe_allow_html=True)
+st.markdown("*Upload documents and chat with them using AI*")
 
 st.markdown("---")
 
