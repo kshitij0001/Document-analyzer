@@ -1018,87 +1018,17 @@ def generate_mind_map():
 
     generate_fresh_mind_map()
 
-# Initialize sidebar state
-if "sidebar_collapsed" not in st.session_state:
-    st.session_state.sidebar_collapsed = False
-
 # Theme-compatible UI styling that adapts to light/dark modes
-st.markdown(f"""
+st.markdown("""
 <style>
     /* Main container styling - respects theme */
-    .main .block-container {{
+    .main .block-container {
         padding: 1rem 2rem;
         max-width: 100%;
-        transition: margin-left 0.3s ease;
-    }}
-
-    /* Hamburger menu button */
-    .hamburger-btn {{
-        position: fixed;
-        top: 1rem;
-        left: 1rem;
-        z-index: 1000;
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.5rem;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }}
-
-    .hamburger-btn:hover {{
-        background: var(--primary-color-dark, var(--primary-color));
-        transform: scale(1.05);
-    }}
-
-    /* Sidebar overlay */
-    .sidebar-overlay {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        z-index: 998;
-        opacity: {'1' if not st.session_state.sidebar_collapsed else '0'};
-        visibility: {'visible' if not st.session_state.sidebar_collapsed else 'hidden'};
-        transition: all 0.3s ease;
-    }}
-
-    /* Sidebar container */
-    .sidebar-container {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 350px;
-        height: 100vh;
-        background: var(--background-color);
-        border-right: 2px solid var(--secondary-background-color);
-        z-index: 999;
-        transform: translateX({'0' if not st.session_state.sidebar_collapsed else '-100%'});
-        transition: transform 0.3s ease;
-        overflow-y: auto;
-        padding: 4rem 1rem 1rem 1rem;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-    }}
-
-    /* Main content area adjustment */
-    .main-content {{
-        margin-left: {'350px' if not st.session_state.sidebar_collapsed else '0'};
-        transition: margin-left 0.3s ease;
-        min-height: 100vh;
-        padding-left: {'0' if not st.session_state.sidebar_collapsed else '60px'};
-    }}
+    }
 
     /* Header styling - theme adaptive */
-    .panel-header {{
+    .panel-header {
         font-size: 1.2rem;
         font-weight: 600;
         margin-bottom: 1.5rem;
@@ -1107,122 +1037,33 @@ st.markdown(f"""
         display: flex;
         align-items: center;
         gap: 0.5rem;
-    }}
+    }
 
     /* Chat messages styling */
-    .chat-container {{
+    .chat-container {
         max-height: 400px;
         overflow-y: auto;
         margin-bottom: 1rem;
-    }}
+    }
 
     /* Analysis cards - theme adaptive */
-    .analysis-result {{
+    .analysis-result {
         margin-bottom: 1rem;
-    }}
+    }
 
     /* Button styling - improved but theme compatible */
-    .stButton > button {{
+    .stButton > button {
         border-radius: 8px;
         padding: 0.5rem 1rem;
         font-weight: 500;
         transition: all 0.3s ease;
-    }}
+    }
 
-    .stButton > button:hover {{
+    .stButton > button:hover {
         transform: translateY(-1px);
-    }}
-
-    /* Close button in sidebar */
-    .close-sidebar-btn {{
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: var(--secondary-background-color);
-        color: var(--text-color);
-        border: none;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-    }}
-
-    .close-sidebar-btn:hover {{
-        background: var(--primary-color);
-        color: white;
-    }}
-
-    /* Hide default Streamlit sidebar */
-    .css-1d391kg {{
-        display: none;
-    }}
-    
-    /* Responsive design */
-    @media (max-width: 768px) {{
-        .sidebar-container {{
-            width: 300px;
-        }}
-        .main-content {{
-            margin-left: {'300px' if not st.session_state.sidebar_collapsed else '0'};
-        }}
-    }}
+    }
 </style>
 """, unsafe_allow_html=True)
-
-# Hamburger menu button
-hamburger_html = f"""
-<button class="hamburger-btn" onclick="
-    var event = new CustomEvent('streamlit:toggle_sidebar');
-    window.parent.document.dispatchEvent(event);
-">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
-    </svg>
-</button>
-"""
-
-# Sidebar overlay (for mobile)
-if not st.session_state.sidebar_collapsed:
-    st.markdown('<div class="sidebar-overlay" onclick="toggleSidebar()"></div>', unsafe_allow_html=True)
-
-# Sidebar container
-sidebar_html = f"""
-<div class="sidebar-container">
-    <button class="close-sidebar-btn" onclick="toggleSidebar()">×</button>
-    <div id="sidebar-content">
-        <!-- Sidebar content will be injected here -->
-    </div>
-</div>
-
-<script>
-function toggleSidebar() {{
-    // Send toggle event to Streamlit
-    window.parent.postMessage({{
-        type: 'streamlit:toggle_sidebar'
-    }}, '*');
-}}
-
-// Listen for custom events
-window.addEventListener('streamlit:toggle_sidebar', toggleSidebar);
-</script>
-"""
-
-st.markdown(hamburger_html, unsafe_allow_html=True)
-st.markdown(sidebar_html, unsafe_allow_html=True)
-
-# Handle sidebar toggle
-if st.button("", key="toggle_sidebar", help="Toggle sidebar", type="secondary"):
-    st.session_state.sidebar_collapsed = not st.session_state.sidebar_collapsed
-    st.rerun()
-
-# Main content area
-st.markdown('<div class="main-content">', unsafe_allow_html=True)
 
 # App header with logo
 col1, col2 = st.columns([1, 4])
@@ -1235,87 +1076,83 @@ with col2:
 
 st.markdown("---")
 
-# Sidebar content (always rendered but positioned via CSS)
-if not st.session_state.sidebar_collapsed:
-    with st.container():
-        # Create an invisible container for sidebar content
-        sidebar_content = st.container()
-        
-        with sidebar_content:
-            # Sources header
-            st.markdown('<div class="panel-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Sources</div>', unsafe_allow_html=True)
+# Main three-column layout
+sources_col, chat_col, studio_col = st.columns([1, 2, 2])
 
-            # Document upload
-            upload_document()
+# SOURCES COLUMN (Left)
+with sources_col:
 
-            st.markdown("---")
+    # Sources header
+    st.markdown('<div class="panel-header"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Sources</div>', unsafe_allow_html=True)
 
-            # Document list
-            display_documents()
+    # Document upload
+    upload_document()
 
-            st.markdown("---")
+    st.markdown("---")
 
-            # AI Settings
-            st.markdown(f"**<img src='data:image/png;base64,{st.session_state.get('gear_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 4px;'> Settings**", unsafe_allow_html=True)
+    # Document list
+    display_documents()
 
-            # Model selection
-            available_models = st.session_state.ai_client.available_models
-            if available_models:
-                current_model_key = None
-                for key, value in available_models.items():
-                    if value == st.session_state.ai_client.current_model:
-                        current_model_key = key
-                        break
+    st.markdown("---")
 
-                if current_model_key:
-                    model_options = list(available_models.keys())
-                    current_index = model_options.index(current_model_key)
+    # AI Settings
+    st.markdown(f"**<img src='data:image/png;base64,{st.session_state.get('gear_icon_b64', '')}' width='16' height='16' style='vertical-align: middle; margin-right: 4px;'> Settings**", unsafe_allow_html=True)
 
-                    selected_model = st.selectbox(
-                        "AI Model",
-                        options=model_options,
-                        index=current_index,
-                        help="Choose the AI model",
-                        key="sidebar_model_select"
-                    )
+    # Model selection
+    available_models = st.session_state.ai_client.available_models
+    if available_models:
+        current_model_key = None
+        for key, value in available_models.items():
+            if value == st.session_state.ai_client.current_model:
+                current_model_key = key
+                break
 
-                    if selected_model != current_model_key:
-                        if st.session_state.ai_client.set_model(selected_model):
-                            st.success(f"Switched to {selected_model}")
-                        else:
-                            st.error(f"Failed to switch to {selected_model}")
+        if current_model_key:
+            model_options = list(available_models.keys())
+            current_index = model_options.index(current_model_key)
 
-            # Personality selection
-            personalities = st.session_state.ai_client.get_available_personalities()
-            personality_options = list(personalities.keys())
-
-            current_personality_index = personality_options.index(st.session_state.ai_client.current_personality)
-
-            selected_personality = st.selectbox(
-                "AI Personality",
-                options=personality_options,
-                format_func=lambda x: personalities[x]["name"],
-                index=current_personality_index,
-                help="Choose AI personality",
-                key="sidebar_personality_select"
+            selected_model = st.selectbox(
+                "AI Model",
+                options=model_options,
+                index=current_index,
+                help="Choose the AI model"
             )
 
-            if selected_personality != st.session_state.ai_client.current_personality:
-                if st.session_state.ai_client.set_personality(selected_personality):
-                    st.success(f"Switched to {personalities[selected_personality]['name']}")
-                    st.session_state.cached_analyses = {}
+            if selected_model != current_model_key:
+                if st.session_state.ai_client.set_model(selected_model):
+                    st.success(f"Switched to {selected_model}")
                 else:
-                    st.error(f"Failed to switch personality")
+                    st.error(f"Failed to switch to {selected_model}")
 
-            # Clear chat button
-            if st.button("Clear Chat", use_container_width=True, help="Clear chat history", key="sidebar_clear_chat"):
-                clear_persistent_chat()
-                st.success("Chat cleared!")
+    # Personality selection
+    personalities = st.session_state.ai_client.get_available_personalities()
+    personality_options = list(personalities.keys())
 
-# Main two-column layout (Chat and Studio)
-chat_col, studio_col = st.columns([1, 1])
+    current_personality_index = personality_options.index(st.session_state.ai_client.current_personality)
 
-# CHAT COLUMN (Left when sidebar is collapsed)
+    selected_personality = st.selectbox(
+        "AI Personality",
+        options=personality_options,
+        format_func=lambda x: personalities[x]["name"],
+        index=current_personality_index,
+        help="Choose AI personality"
+    )
+
+    if selected_personality != st.session_state.ai_client.current_personality:
+        if st.session_state.ai_client.set_personality(selected_personality):
+            st.success(f"Switched to {personalities[selected_personality]['name']}")
+            st.session_state.cached_analyses = {}
+        else:
+            st.error(f"Failed to switch personality")
+
+    # Clear chat button
+    if st.button("Clear Chat", use_container_width=True, help="Clear chat history"):
+        clear_persistent_chat()
+        st.success("Chat cleared!")
+
+
+
+# CHAT COLUMN (Middle)
 with chat_col:
 
     # Chat header
@@ -1491,37 +1328,3 @@ with studio_col:
 
         st.markdown("**Supported formats**: PDF, Word documents, Plain text")
         st.markdown("Upload your documents using the Sources section to begin!")
-
-# Close main content div
-st.markdown('</div>', unsafe_allow_html=True)
-
-# JavaScript for handling sidebar toggle
-st.markdown("""
-<script>
-// Function to toggle sidebar state
-function toggleSidebarState() {
-    // This will trigger a rerun with the toggle button
-    const toggleBtn = window.parent.document.querySelector('[data-testid="stButton"] button[title="Toggle sidebar"]');
-    if (toggleBtn) {
-        toggleBtn.click();
-    }
-}
-
-// Listen for messages from iframe
-window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'streamlit:toggle_sidebar') {
-        toggleSidebarState();
-    }
-});
-
-// Handle hamburger button clicks
-document.addEventListener('click', function(event) {
-    if (event.target.closest('.hamburger-btn')) {
-        toggleSidebarState();
-    }
-    if (event.target.closest('.close-sidebar-btn') || event.target.closest('.sidebar-overlay')) {
-        toggleSidebarState();
-    }
-});
-</script>
-""", unsafe_allow_html=True)
