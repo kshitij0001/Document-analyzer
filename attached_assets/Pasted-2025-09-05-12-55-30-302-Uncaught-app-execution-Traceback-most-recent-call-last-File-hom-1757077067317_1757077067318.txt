@@ -1,0 +1,61 @@
+2025-09-05 12:55:30.302 Uncaught app execution
+
+Traceback (most recent call last):
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 128, in exec_func_with_error_handling
+
+    result = func()
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 669, in code_to_exec
+
+    exec(code, module.__dict__)  # noqa: S102
+
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 1288, in <module>
+
+    display_mind_map_results(mindmap_cache["content"])
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 456, in display_mind_map_results
+
+    display_mind_map_tree(mind_map_data)
+
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+
+  File "/mount/src/document-analyzer/app.py", line 495, in display_mind_map_tree
+
+    handle_pending_actions()
+
+    ~~~~~~~~~~~~~~~~~~~~~~^^
+
+  File "/mount/src/document-analyzer/app.py", line 256, in handle_pending_actions
+
+    st.success(f"Started exploration of '{topic['name']}' - check the Chat tab!", icon="✓")
+
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/metrics_util.py", line 443, in wrapped_func
+
+    result = non_optional_func(*args, **kwargs)
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/elements/alert.py", line 306, in success
+
+    alert_proto.icon = validate_icon_or_emoji(icon)
+
+                       ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/string_util.py", line 64, in validate_icon_or_emoji
+
+    return validate_emoji(icon)
+
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/string_util.py", line 73, in validate_emoji
+
+    raise StreamlitAPIException(
+
+    ...<2 lines>...
+
+    )
+
+streamlit.errors.StreamlitAPIException: The value "✓" is not a valid emoji. Shortcodes are not allowed, please use a single character instead.

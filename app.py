@@ -253,7 +253,7 @@ def handle_pending_actions():
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         st.session_state.chat_messages.append({"role": "user", "message": question})
-        st.success(f"Started exploration of '{topic['name']}' - check the Chat tab!", icon="✓")
+        st.success(f"Started exploration of '{topic['name']}' - check the Chat tab!")
 
     # Handle details
     if "pending_details" in st.session_state:
@@ -284,7 +284,7 @@ def handle_pending_actions():
         if "chat_messages" not in st.session_state:
             st.session_state.chat_messages = []
         st.session_state.chat_messages.append({"role": "user", "message": question})
-        st.success(f"Started discussion about '{topic['name']}' - check the Chat tab!", icon="✓")
+        st.success(f"Started discussion about '{topic['name']}' - check the Chat tab!")
 
 def perform_comprehensive_analysis(theme_data):
     """Perform comprehensive analysis and display results"""
@@ -355,7 +355,7 @@ def perform_data_extraction(theme_data):
             )
 
             if response["success"]:
-                st.success(f"Data Points: {theme_name}", icon="✓")
+                st.success(f"Data Points: {theme_name}")
                 st.write(response["content"])
             else:
                 st.error(f"Data extraction failed: {response.get('error', 'Unknown error')}")
@@ -395,7 +395,7 @@ def perform_details_generation(sub_theme_data):
             )
 
             if response["success"]:
-                st.success(f"Detailed Notes: {topic_name}", icon="✓")
+                st.success(f"Detailed Notes: {topic_name}")
                 st.write(response["content"])
             else:
                 st.error(f"Details generation failed: {response.get('error', 'Unknown error')}")
@@ -618,7 +618,7 @@ def generate_detailed_notes(topic_data):
             )
 
             if response["success"]:
-                st.success(f"Detailed Notes: {topic_name}", icon="✓")
+                st.success(f"Detailed Notes: {topic_name}")
                 st.write(response["content"])
             else:
                 st.error(f"Failed to generate notes: {response['error']}")
@@ -680,7 +680,7 @@ def extract_data_points(theme_data):
             )
 
             if response["success"]:
-                st.success(f"Data Points: {theme_name}", icon="✓")
+                st.success(f"Data Points: {theme_name}")
                 st.write(response["content"])
             else:
                 st.error(f"Failed to extract data points: {response['error']}")
