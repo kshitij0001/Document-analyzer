@@ -1,5 +1,5 @@
 # AI Document Analyzer & Chat
-
+ 
 ## Overview
 
 This project is a NotebookLM-inspired document analysis tool built with Streamlit that allows users to upload documents (PDF, Word, text files) and interact with them through AI-powered chat. The application extracts text from documents, processes them into searchable chunks, and provides intelligent responses using free AI models from OpenRouter. It features multiple AI personalities (General Assistant, Academic Researcher, Business Analyst) to provide specialized perspectives on document content.
